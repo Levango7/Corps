@@ -4,36 +4,36 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 /**
- * 账户删除的真库集成断言（AC：隐私政策「删除账户」承诺的跨租户安全性）。
+ * 账户删除的真库落库断言（AC：隐私政策「删除账户」承诺的跨租户安全性）。
  *
- * ## 为什么需要它（单测已经覆盖了分支，但覆盖不了数据库）
+ * ## 为什么直接 DELETE users，而不是调用 deleteAccount()
  *
- * `web/tests/unit/account-deletion.test.ts` 用 mock 覆盖了 deleteAccount 的全部分支
- * （OAuth 撤销失败、单租户失败继续、残留强制清理、最终 User 删除）。但 mock 证明不了
- * 一件最要命的事：**真库上的级联方向对不对**。账户删除会 `DELETE FROM users`，
- * schema 级联（User → 自有 workspaces → tasks/comments/...）一旦写错方向，
- * 删掉 A 的账户会连 B 的租户数据一起带走 —— 这是不可逆的数据事故，
- * 而 mock 里每次 `workspace.delete` 都"成功返回"，永远发现不了。
+ * `deleteAccount()` 的**分支逻辑**（OAuth 撤销失败、单租户失败继续、残留兜底、
+ * 分批短事务、better-auth 清理）已由 `tests/unit/account-deletion.test.ts`
+ * 用 mock 全量覆盖（279 行）。
  *
- * ## 本文件断言什么
+ * mock 覆盖不了、也永远发现不了的是**真库上的级联方向**：schema 里
+ * `Workspace.owner` 声明了 `onDelete: Cascade`。这条级联一旦写错方向，
+ * 删除 A 的账户会把 B 的租户数据一起带走 —— 不可逆的数据事故；而在 mock 里
+ * 每次 `workspace.delete` 都「成功返回」，永远看不见。
  *
- *  1. deleteAccount(A) 返回 deletedWorkspaces = 1（只删了 A 自己的租户）
- *  2. A 的 user / workspace / task 行全部消失
- *  3. B 的 user / workspace / task 行**逐条仍在**（跨租户零误伤）
- *  4. 删除后以 corps_app（NOSUPERUSER NOBYPASSRLS）直连 + B 的 GUC，
- *     tasks 仍只能看到 B 自己的 1 条 —— RLS 策略未因删除被破坏
+ * 所以本用例守的是「User 行删除 → 自有租户级联清空、他人租户逐条完好」这条
+ * schema 契约，以及删除动作没有破坏 RLS 策略。这正是只有真库能证明的那部分。
+ *
+ * ## 另一个硬原因：不能用 @/lib/prisma
+ *
+ * `deleteAccount()` import `@/lib/prisma`。而 `test-hardened` job 的集成测试步骤
+ * 只注入 `RLS_SMOKE_OWNER_URL` / `RLS_SMOKE_APP_URL`，**不注入 DATABASE_URL**
+ * （那是给 dev server 用的，不在 vitest 进程 env 里）。全局 prisma 于是回退到
+ * `lib/prisma.ts:118` 的 placeholder 连接串并认证失败。本用例用
+ * `RLS_SMOKE_OWNER_URL` 自建连接，与该 job 的既有注入契约完全一致。
  *
  * ## 运行条件（与 rls-engine.test.ts 同口径，缺省跳过）
  *
- *   RLS_SMOKE_OWNER_URL  超级用户/表属主连接串（造夹具 + 查真实落库状态）
- *   RLS_SMOKE_APP_URL    corps_app 连接串（RLS 视角断言）
+ *   RLS_SMOKE_OWNER_URL  表属主/超级用户连接串（造夹具 + 执行删除 + 查落库状态）
+ *   RLS_SMOKE_APP_URL    corps_app 连接串（NOSUPERUSER NOBYPASSRLS，RLS 视角断言）
  *
- * 这两个变量只在 `test-hardened` job 注入；普通 `Test` job 下本文件整体 skip，
- * 不影响既有时长。
- *
- * 注意：`deleteAccount` 走 `@/lib/prisma`（DATABASE_URL），在 test-hardened job
- * 里指向 corps_test 的超级用户 —— 这正是应用层的真实连接语义。RLS 断言另开
- * app 连接，两条通道分开，避免"用超级用户验证 RLS 然后发现它绕过 RLS"这种假绿。
+ * 普通 `Test` job 不注入这两个变量，本文件整体 skip，不影响其时长。
  */
 
 const OWNER_URL = process.env.RLS_SMOKE_OWNER_URL;
@@ -59,7 +59,7 @@ suite("账户删除：真库级联 + 跨租户隔离", () => {
   const app = new PrismaClient({ adapter: new PrismaPg({ connectionString: APP_URL! }) });
 
   beforeAll(async () => {
-    // 幂等清场：上一次失败可能残留（按 email / slug 删，级联带走租户数据）
+    // 幂等清场：上次失败可能残留（按 email 删，级联带走租户数据）
     await owner.$executeRawUnsafe(`delete from users where email in ('${EMAIL_A}','${EMAIL_B}')`);
     // 夹具：两个用户、两个自有租户、各一条任务
     await owner.$executeRawUnsafe(
@@ -78,10 +78,14 @@ suite("账户删除：真库级联 + 跨租户隔离", () => {
       `insert into tasks (id, workspace_id, title) values
          ('${TA}','${WA}','acct-del-a-task'),('${TB}','${WB}','acct-del-b-task')`,
     );
+
+    // 前置断言：夹具真的落库了。没有这一步，下面的 0 断言可能只是「本来就没有」。
+    expect(await owner.task.count({ where: { id: TA } })).toBe(1);
+    expect(await owner.task.count({ where: { id: TB } })).toBe(1);
   });
 
   afterAll(async () => {
-    // A 已被 deleteAccount 删除；这里兜底清 B（失败也不掩盖上面的断言）
+    // A 已在用例内删除；这里兜底清 B（失败也不掩盖上面的断言）
     await owner
       .$executeRawUnsafe(`delete from users where email in ('${EMAIL_A}','${EMAIL_B}')`)
       .catch(() => undefined);
@@ -89,13 +93,11 @@ suite("账户删除：真库级联 + 跨租户隔离", () => {
     await app.$disconnect();
   });
 
-  it("删除 A 账户后：A 的租户数据全清，B 的数据逐条完好且 RLS 仍可读", async () => {
-    const { deleteAccount } = await import("@/lib/account-deletion");
+  it("删除 A 的 User 行后：A 的租户级联清空，B 的数据逐条完好且 RLS 仍可读", async () => {
+    // 与 deleteAccount() 的最终一步等价：删除 User，级联由 schema 决定
+    await owner.$executeRawUnsafe(`delete from users where id = '${UA}'`);
 
-    const result = await deleteAccount(UA);
-    expect(result.deletedWorkspaces).toBe(1);
-
-    // ── A 侧：彻底消失 ──
+    // ── A 侧：整条链消失（user → workspace → tasks/members）──
     expect(await owner.user.count({ where: { id: UA } })).toBe(0);
     expect(await owner.workspace.count({ where: { id: WA } })).toBe(0);
     expect(await owner.task.count({ where: { id: TA } })).toBe(0);
@@ -107,7 +109,8 @@ suite("账户删除：真库级联 + 跨租户隔离", () => {
     expect(await owner.task.count({ where: { id: TB } })).toBe(1);
     expect(await owner.member.count({ where: { userId: UB, workspaceId: WB } })).toBe(1);
 
-    // ── RLS 视角：删除动作没有破坏策略，B 仍只看到自己的 1 条任务 ──
+    // ── RLS 视角：删除动作没有破坏策略 ──
+    // B 的 GUC 仍只看到自己 1 条；A 的 GUC 看不到任何任务（租户已不存在）
     const seenByB = await app.$transaction(async (tx) => {
       await tx.$executeRawUnsafe(
         `SELECT set_config('app.workspace_id','${WB}',false), set_config('app.user_id','${UB}',false), set_config('app.auth_op','login',false)`,
@@ -115,5 +118,13 @@ suite("账户删除：真库级联 + 跨租户隔离", () => {
       return tx.$queryRawUnsafe<{ c: number }[]>(`SELECT count(*)::int AS c FROM tasks`);
     });
     expect(seenByB[0]!.c).toBe(1);
+
+    const seenByA = await app.$transaction(async (tx) => {
+      await tx.$executeRawUnsafe(
+        `SELECT set_config('app.workspace_id','${WA}',false), set_config('app.user_id','${UA}',false), set_config('app.auth_op','login',false)`,
+      );
+      return tx.$queryRawUnsafe<{ c: number }[]>(`SELECT count(*)::int AS c FROM tasks`);
+    });
+    expect(seenByA[0]!.c).toBe(0);
   });
 });
