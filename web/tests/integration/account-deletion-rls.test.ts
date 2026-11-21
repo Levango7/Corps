@@ -60,9 +60,7 @@ suite("账户删除：真库级联 + 跨租户隔离", () => {
 
   beforeAll(async () => {
     // 幂等清场：上一次失败可能残留（按 email / slug 删，级联带走租户数据）
-    await owner.$executeRawUnsafe(
-      `delete from users where email in ('${EMAIL_A}','${EMAIL_B}')`,
-    );
+    await owner.$executeRawUnsafe(`delete from users where email in ('${EMAIL_A}','${EMAIL_B}')`);
     // 夹具：两个用户、两个自有租户、各一条任务
     await owner.$executeRawUnsafe(
       `insert into users (id, email) values ('${UA}','${EMAIL_A}'),('${UB}','${EMAIL_B}')`,
@@ -84,9 +82,9 @@ suite("账户删除：真库级联 + 跨租户隔离", () => {
 
   afterAll(async () => {
     // A 已被 deleteAccount 删除；这里兜底清 B（失败也不掩盖上面的断言）
-    await owner.$executeRawUnsafe(
-      `delete from users where email in ('${EMAIL_A}','${EMAIL_B}')`,
-    ).catch(() => undefined);
+    await owner
+      .$executeRawUnsafe(`delete from users where email in ('${EMAIL_A}','${EMAIL_B}')`)
+      .catch(() => undefined);
     await owner.$disconnect();
     await app.$disconnect();
   });

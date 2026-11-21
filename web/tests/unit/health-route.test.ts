@@ -30,9 +30,10 @@ vi.mock("@/lib/red-metrics", () => ({ withRed: (handler: unknown) => handler }))
 
 import { GET } from "@/app/api/health/route";
 
-const call = () => (GET as unknown as (r: NextRequest) => Promise<Response>)(
-  new NextRequest("http://localhost/api/health"),
-);
+const call = () =>
+  (GET as unknown as (r: NextRequest) => Promise<Response>)(
+    new NextRequest("http://localhost/api/health"),
+  );
 
 beforeEach(() => {
   h.queryRaw.mockReset();
