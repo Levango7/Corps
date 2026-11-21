@@ -20,8 +20,9 @@
 「未命中」误读成死模式。glob 语义按 dependabot 文档：`*` 是整名通配，
 `@types/node` 不匹配 `@types/nodemailer`。
 
-**未接入 CI**（与 `verify_deploy_package.py` 同状态，属手动核对工具）：
-把它塞进 Lint 腿等于新增一道门禁，得自带射程证据并改 ci.yml，那是另一笔决定。
+2026-11-21 起接入 CI（挂在 api-contract job，该 job 已装 PyYAML 且是 required）：
+主检查 + --self-test 两道，与其余契约/配置门禁同腿。此前是手动核对工具
+（与 verify_deploy_package.py 同状态），脚本并不参与任何 PR 门禁。
 
 用法：
   python scripts/check_dependabot_groups.py            核对在册配置
@@ -54,6 +55,7 @@ EXPECTED_UNGROUPED = [
     "@types/qrcode",
     "@types/web-push",
     "bcryptjs",
+    "imapflow",
     "ioredis",
     "json-logic-js",
     "jsonwebtoken",
