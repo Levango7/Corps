@@ -20,14 +20,15 @@ import { logger } from "@/lib/logger";
 // 客户端创建
 // ---------------------------------------------------------------------------
 
-/** DeepSeek 客户端（首选，OpenAI 兼容格式） */
+/** DeepSeek 客户端（首选，OpenAI 兼容格式；网关地址可用 DEEPSEEK_BASE_URL 覆盖） */
 export const deepseek = createOpenAI({
-  baseURL: "https://api.deepseek.com/v1",
+  baseURL: process.env.DEEPSEEK_BASE_URL ?? "https://api.deepseek.com/v1",
   apiKey: process.env.DEEPSEEK_API_KEY ?? "",
 });
 
-/** OpenAI 客户端（fallback） */
+/** OpenAI 客户端（fallback；网关地址可用 OPENAI_BASE_URL 覆盖） */
 export const openai = createOpenAI({
+  baseURL: process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1",
   apiKey: process.env.OPENAI_API_KEY ?? "",
 });
 
@@ -35,11 +36,16 @@ export const openai = createOpenAI({
 // 模型实例（私有，通过 getter 函数暴露）
 // ---------------------------------------------------------------------------
 
-/** DeepSeek 通用模型（续写/摘要/翻译/格式化/问答） */
-const deepseekDefaultModel = deepseek("deepseek-chat");
+/**
+ * DeepSeek 模型必须显式钉 Chat Completions 端点（deepseek.chat(...)）：
+ * @ai-sdk/openai v4 的默认构造走 OpenAI Responses API（/v1/responses），
+ * 而 DeepSeek 只有 /v1/chat/completions——默认构造实测 404（AI_APICallError: not found），
+ * 主 provider 从未真正通过，全部流量被 fallback 吃掉。OpenAI 官方支持 /responses，保持默认。
+ */
+const deepseekDefaultModel = deepseek.chat("deepseek-chat");
 
 /** DeepSeek 推理模型（复杂问答/决策提取等需要深度推理的场景） */
-const deepseekReasonerModel = deepseek("deepseek-reasoner");
+const deepseekReasonerModel = deepseek.chat("deepseek-reasoner");
 
 /** OpenAI fallback 通用模型（与 deepseek-chat 对应） */
 const fallbackDefaultModel = openai("gpt-4o-mini");
