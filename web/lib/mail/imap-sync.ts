@@ -1,6 +1,7 @@
 import { ImapFlow, type FetchMessageObject } from "imapflow";
 import { PrismaClient } from "@prisma/client";
 import type { EmailAccount } from "@prisma/client";
+import { runWithWorkspace } from "@/lib/auth";
 
 /**
  * IMAP 同步服务
@@ -215,11 +216,18 @@ export class ImapSync {
     if (!this.client) throw new Error("IMAP client not connected");
 
     if (!this.options.fullSync) {
-      const last = await this.prisma.mail.findFirst({
-        where: { accountId: this.account.id },
-        orderBy: { uid: "desc" },
-        select: { uid: true },
-      });
+      // 读最高 UID 走 RLS 作用域事务：mails 表启用 RLS（p_mails_* 只看 workspace_id），
+      // 全局 prisma 直查读不到行（本机启用 RLS 后实证）。
+      const last = await runWithWorkspace(
+        this.account.workspaceId,
+        (tx) =>
+          tx.mail.findFirst({
+            where: { accountId: this.account.id },
+            orderBy: { uid: "desc" },
+            select: { uid: true },
+          }),
+        this.account.userId,
+      );
       this.highestUid = last?.uid ?? 0;
     }
 
@@ -247,15 +255,38 @@ export class ImapSync {
 
     const parsed = this.parseMessage(message);
 
-    // 基于 messageId + accountId 去重
-    const existing = await this.prisma.mail.findFirst({
-      where: { accountId: this.account.id, messageId: parsed.messageId },
-      select: { id: true },
-    });
-    if (existing) return "skipped";
+    // 去重与写入都走 RLS 作用域短事务（每封邮件一个事务，IMAP 网络 IO 留在事务外）
+    const { created } = await runWithWorkspace(
+      this.account.workspaceId,
+      async (tx) => {
+        const existing = await tx.mail.findFirst({
+          where: { accountId: this.account.id, messageId: parsed.messageId },
+          select: { id: true },
+        });
+        if (existing) return { created: false };
 
-    await this.storeMessage(parsed, uid);
-    return "created";
+        await tx.mail.create({
+          data: {
+            workspaceId: this.account.workspaceId,
+            accountId: this.account.id,
+            uid,
+            messageId: parsed.messageId,
+            fromAddr: parsed.fromAddr,
+            toAddr: parsed.toAddr,
+            ccAddr: parsed.ccAddr ?? undefined,
+            bccAddr: parsed.bccAddr ?? undefined,
+            subject: parsed.subject,
+            bodyText: parsed.bodyText,
+            bodyHtml: parsed.bodyHtml ?? undefined,
+            status: parsed.status,
+            sentAt: parsed.sentAt,
+          },
+        });
+        return { created: true };
+      },
+      this.account.userId,
+    );
+    return created ? "created" : "skipped";
   }
 
   /**
@@ -284,29 +315,6 @@ export class ImapSync {
       status: "received",
       sentAt: Number.isNaN(sentAt.getTime()) ? new Date() : sentAt,
     };
-  }
-
-  /**
-   * 存储邮件到数据库
-   */
-  private async storeMessage(parsed: ParsedEmail, uid: number): Promise<void> {
-    await this.prisma.mail.create({
-      data: {
-        workspaceId: this.account.workspaceId,
-        accountId: this.account.id,
-        uid,
-        messageId: parsed.messageId,
-        fromAddr: parsed.fromAddr,
-        toAddr: parsed.toAddr,
-        ccAddr: parsed.ccAddr ?? undefined,
-        bccAddr: parsed.bccAddr ?? undefined,
-        subject: parsed.subject,
-        bodyText: parsed.bodyText,
-        bodyHtml: parsed.bodyHtml ?? undefined,
-        status: parsed.status,
-        sentAt: parsed.sentAt,
-      },
-    });
   }
 
   /**

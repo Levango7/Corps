@@ -19,7 +19,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Plus, Trash2, Loader2, AlertCircle, Mail, X, Check } from "lucide-react";
+import { Plus, Trash2, Loader2, AlertCircle, Mail, X, Check, RefreshCw } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/Toast";
 
@@ -34,6 +34,14 @@ interface MailAccount {
   smtpSecure: boolean;
   isDefault: boolean;
   createdAt: string;
+}
+
+/** 手动同步响应（POST /api/v1/mail/sync 的 data） */
+interface SyncResponse {
+  synced: number;
+  created: number;
+  failed: number;
+  results: Array<{ accountId: string; success: boolean; created: number; error?: string }>;
 }
 
 /** MailSettings Props */
@@ -51,6 +59,7 @@ export default function MailSettings({ workspaceId }: MailSettingsProps) {
   const [error, setError] = useState("");
   const [adding, setAdding] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
   // 表单状态
   const [email, setEmail] = useState("");
@@ -149,6 +158,27 @@ export default function MailSettings({ workspaceId }: MailSettingsProps) {
     }
   }
 
+  /** 立即同步：触发当前用户全部邮箱账户的 IMAP 同步（POST /api/v1/mail/sync） */
+  async function handleSync() {
+    if (syncing) return;
+    setSyncing(true);
+    try {
+      const data = await api<SyncResponse>("/api/v1/mail/sync", { method: "POST" });
+      if (data.synced === 0) {
+        toast("error", t("noAccount"));
+      } else if (data.failed > 0) {
+        toast("error", t("syncPartial", { created: data.created, failed: data.failed }));
+      } else {
+        toast("success", t("syncDone", { created: data.created }));
+      }
+    } catch (e) {
+      if (process.env.NODE_ENV === "development") console.error("[MailSettings] sync error:", e);
+      toast("error", t("syncFailed"));
+    } finally {
+      setSyncing(false);
+    }
+  }
+
   return (
     <div
       className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--elev-sm)]"
@@ -160,7 +190,21 @@ export default function MailSettings({ workspaceId }: MailSettingsProps) {
           <Mail size={16} className="text-[var(--accent)]" />
           {t("settings")}
         </h2>
-        <span className="text-[length:var(--text-xs)] text-[var(--muted)]">{accounts.length}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-[length:var(--text-xs)] text-[var(--muted)]">
+            {accounts.length}
+          </span>
+          <button
+            type="button"
+            onClick={handleSync}
+            disabled={syncing}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-[var(--radius-md)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--accent-fg)] bg-[var(--accent)] hover:bg-[var(--accent-hover)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label={t("sync")}
+          >
+            {syncing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+            {syncing ? t("syncing") : t("sync")}
+          </button>
+        </div>
       </header>
 
       {/* ── 正文 ── */}

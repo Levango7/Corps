@@ -115,6 +115,7 @@
     "fullscreen": "全屏"
   },
   "nav": {
+    "mail": "邮箱",
     "workspace": {
       "switch": "切换工作区",
       "current": "当前工作区",
@@ -154,6 +155,7 @@
       "recycleBin": "回收站",
       "contacts": "通讯录",
       "govDoc": "公文",
+      "mail": "邮箱",
       "workflows": "工作流",
       "okr": "OKR",
       "templates": "项目模板",
@@ -4023,6 +4025,11 @@
     "deleteConfirm": "确认删除该邮件？",
     "draftSaved": "草稿已保存",
     "noAccount": "请先添加邮箱账户",
+    "sync": "立即同步",
+    "syncing": "同步中…",
+    "syncDone": "同步完成：新增 {created} 封",
+    "syncPartial": "同步完成：新增 {created} 封，{failed} 个账户失败",
+    "syncFailed": "同步失败，请检查账户配置",
     "selectAccount": "选择账户",
     "updated": "已更新",
     "deleted": "已删除",
