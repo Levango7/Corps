@@ -158,12 +158,15 @@ export default function MailSettings({ workspaceId }: MailSettingsProps) {
     }
   }
 
-  /** 立即同步：触发当前用户全部邮箱账户的 IMAP 同步（POST /api/v1/mail/sync） */
+  /** 立即同步：触发当前用户在本工作区邮箱账户的 IMAP 同步（POST /api/v1/mail/sync） */
   async function handleSync() {
     if (syncing) return;
     setSyncing(true);
     try {
-      const data = await api<SyncResponse>("/api/v1/mail/sync", { method: "POST" });
+      const data = await api<SyncResponse>(
+        `/api/v1/mail/sync?wid=${encodeURIComponent(workspaceId)}`,
+        { method: "POST" },
+      );
       if (data.synced === 0) {
         toast("error", t("noAccount"));
       } else if (data.failed > 0) {

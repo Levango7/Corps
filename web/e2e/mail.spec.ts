@@ -11,7 +11,10 @@ test.describe("邮箱", () => {
     const wid = await registerAndLogin(page, uniqueEmail("e2e-mail-owner"), "E2E邮箱工作区");
 
     await page.goto(`/w/${wid}/mail`);
-    await expect(page.getByRole("heading", { name: "邮箱" })).toBeVisible({ timeout: 20_000 });
+    // exact：页内 h2「邮箱设置」是 h1「邮箱」的子串，非 exact 会 strict violation
+    await expect(page.getByRole("heading", { name: "邮箱", exact: true })).toBeVisible({
+      timeout: 20_000,
+    });
     // 账户设置卡片：新工作区无邮箱账户 → 空态文案
     const settings = page.getByLabel("邮箱设置");
     await expect(settings.getByText("请先添加邮箱账户", { exact: true })).toBeVisible({

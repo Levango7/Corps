@@ -1,5 +1,4 @@
 import { ImapFlow, type FetchMessageObject } from "imapflow";
-import { PrismaClient } from "@prisma/client";
 import type { EmailAccount } from "@prisma/client";
 import { runWithWorkspace } from "@/lib/auth";
 
@@ -84,17 +83,11 @@ interface ParsedEmail {
  */
 export class ImapSync {
   private client: ImapFlow | null = null;
-  private readonly prisma: PrismaClient;
   private readonly account: EmailAccount;
   private readonly options: Omit<SyncOptions, "account">;
   private highestUid = 0;
 
-  constructor(
-    prisma: PrismaClient,
-    account: EmailAccount,
-    options: Omit<SyncOptions, "account"> = {},
-  ) {
-    this.prisma = prisma;
+  constructor(account: EmailAccount, options: Omit<SyncOptions, "account"> = {}) {
     this.account = account;
     this.options = {
       mailbox: "INBOX",
@@ -337,14 +330,13 @@ export class ImapSync {
  * 批量同步多个账户的便捷函数
  */
 export async function syncAllAccounts(
-  prisma: PrismaClient,
   accounts: EmailAccount[],
   options: Omit<SyncOptions, "account"> = {},
 ): Promise<Map<string, SyncResult>> {
   const results = new Map<string, SyncResult>();
 
   for (const account of accounts) {
-    const sync = new ImapSync(prisma, account, options);
+    const sync = new ImapSync(account, options);
     const result = await sync.sync();
     results.set(account.id, result);
   }

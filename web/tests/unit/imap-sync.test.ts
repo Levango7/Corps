@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { EmailAccount, PrismaClient } from "@prisma/client";
+import type { EmailAccount } from "@prisma/client";
 
 /**
  * ImapSync 契约（lib/mail/imap-sync.ts）
@@ -23,6 +23,15 @@ const mocks = vi.hoisted(() => ({
   search: vi.fn(),
   fetchOne: vi.fn(),
   decrypt: vi.fn(),
+  // 作用域事务替身：runWithWorkspace 的 mock 把 fn 喂给这里的 tx（每用例重置）
+  runWithTx: { current: null as unknown },
+}));
+
+// 同步器在启用 RLS 的 mails 表上走工作区作用域事务（lib/auth 的 runWithWorkspace），
+// 单测把它替换为「fn 直接收到事务替身」——事务对象就是各用例构造的 prismaStub。
+vi.mock("@/lib/auth", () => ({
+  runWithWorkspace: async (_wid: string, fn: (tx: unknown) => unknown, _userId: string) =>
+    fn(mocks.runWithTx.current),
 }));
 
 vi.mock("imapflow", () => {
@@ -63,31 +72,17 @@ function account(overrides: Partial<EmailAccount> = {}): EmailAccount {
 }
 
 /**
- * Prisma 替身：只实现同步器用到的两个方法。
- *
- * 显式声明成 mock 类型而不是断言成 PrismaClient——后者会让 TS 把
- * `prisma.mail.findFirst` 当成真 Prisma 方法（没有 `.mockResolvedValue`），
- * 测试里的 mock 配置就编译不过。
+ * Prisma 事务替身：只实现同步器用到的两个方法。
+ * 同步器不收 prisma——DB 访问全部经 runWithWorkspace 的事务对象，
+ * 所以替身直接放进 mocks.runWithTx.current（见文件顶部 mock）。
  */
-interface PrismaStub {
-  mail: {
-    findFirst: ReturnType<typeof vi.fn>;
-    create: ReturnType<typeof vi.fn>;
-  };
-}
-
-function prismaStub(): PrismaStub {
+function prismaStub() {
   return {
     mail: {
       findFirst: vi.fn(),
       create: vi.fn(),
     },
   };
-}
-
-/** 把替身喂给同步器（同步器只读这两个方法，运行时等价） */
-function asPrisma(stub: PrismaStub): PrismaClient {
-  return stub as unknown as PrismaClient;
 }
 
 function envelopeMessage(overrides: Record<string, unknown> = {}) {
@@ -112,11 +107,12 @@ beforeEach(() => {
   mocks.decrypt.mockReturnValue("plain-pass");
   mocks.connect.mockResolvedValue(undefined);
   mocks.logout.mockResolvedValue(undefined);
+  mocks.runWithTx.current = prismaStub();
 });
 
 describe("ImapSync", () => {
   it("缺 IMAP 主机/端口时直接失败，不静默连默认值", async () => {
-    const sync = new ImapSync(asPrisma(prismaStub()), account({ imapHost: null }), {});
+    const sync = new ImapSync(account({ imapHost: null }), {});
     const result = await sync.sync();
 
     expect(result.success).toBe(false);
@@ -139,10 +135,11 @@ describe("ImapSync", () => {
       }),
     );
     const prisma = prismaStub();
+    mocks.runWithTx.current = prisma;
     prisma.mail.findFirst.mockResolvedValue(null);
     prisma.mail.create.mockResolvedValue({});
 
-    const sync = new ImapSync(asPrisma(prisma), account(), {});
+    const sync = new ImapSync(account(), {});
     const result = await sync.sync();
 
     expect(result.success).toBe(true);
@@ -160,9 +157,10 @@ describe("ImapSync", () => {
     mocks.search.mockResolvedValue([42]);
     mocks.fetchOne.mockResolvedValue(envelopeMessage());
     const prisma = prismaStub();
+    mocks.runWithTx.current = prisma;
     prisma.mail.findFirst.mockResolvedValue({ id: "existing" });
 
-    const sync = new ImapSync(asPrisma(prisma), account(), {});
+    const sync = new ImapSync(account(), {});
     const result = await sync.sync();
 
     expect(result.skipped).toBe(1);
@@ -177,9 +175,8 @@ describe("ImapSync", () => {
 
   it("search 返回 false（无匹配）视为空列表，不当成错误", async () => {
     mocks.search.mockResolvedValue(false);
-    const prisma = prismaStub();
 
-    const sync = new ImapSync(asPrisma(prisma), account(), {});
+    const sync = new ImapSync(account(), {});
     const result = await sync.sync();
 
     expect(result.success).toBe(true);
@@ -190,9 +187,10 @@ describe("ImapSync", () => {
   it("增量游标：从本机最大 UID + 1 起搜", async () => {
     mocks.search.mockResolvedValue([]);
     const prisma = prismaStub();
+    mocks.runWithTx.current = prisma;
     prisma.mail.findFirst.mockResolvedValue({ uid: 108 });
 
-    const sync = new ImapSync(asPrisma(prisma), account(), {});
+    const sync = new ImapSync(account(), {});
     await sync.sync();
 
     expect(prisma.mail.findFirst).toHaveBeenCalledWith({
@@ -207,7 +205,7 @@ describe("ImapSync", () => {
     mocks.search.mockResolvedValue([]);
     const prisma = prismaStub();
 
-    const sync = new ImapSync(asPrisma(prisma), account(), { fullSync: true });
+    const sync = new ImapSync(account(), { fullSync: true });
     await sync.sync();
 
     expect(prisma.mail.findFirst).not.toHaveBeenCalled();
@@ -216,10 +214,9 @@ describe("ImapSync", () => {
 
   it("进度回调按阶段上报，出错时带 error 文案", async () => {
     mocks.search.mockRejectedValue(new Error("boom"));
-    const prisma = prismaStub();
     const onProgress = vi.fn();
 
-    const sync = new ImapSync(asPrisma(prisma), account(), { onProgress });
+    const sync = new ImapSync(account(), { onProgress });
     const result = await sync.sync();
 
     expect(result.success).toBe(false);
@@ -242,10 +239,11 @@ describe("ImapSync", () => {
       }),
     );
     const prisma = prismaStub();
+    mocks.runWithTx.current = prisma;
     prisma.mail.findFirst.mockResolvedValue(null);
     prisma.mail.create.mockResolvedValue({});
 
-    const sync = new ImapSync(asPrisma(prisma), account(), {});
+    const sync = new ImapSync(account(), {});
     await sync.sync();
 
     const created = prisma.mail.create.mock.calls[0][0];
