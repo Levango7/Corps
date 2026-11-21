@@ -1,4 +1,5 @@
 import dynamic from "next/dynamic";
+import AiNotConfiguredBanner from "@/components/ai/AiNotConfiguredBanner";
 
 // P0-2: code splitting — KnowledgeQaPanel 改为 dynamic import 懒加载
 const KnowledgeQaPanel = dynamic(
@@ -17,6 +18,7 @@ export default async function KnowledgeQaPage({ params }: { params: Promise<{ wi
   const { wid } = await params;
   return (
     <main className="flex-1 min-w-0">
+      <AiNotConfiguredBanner />
       <KnowledgeQaPanel wid={wid} />
     </main>
   );

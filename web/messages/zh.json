@@ -2523,6 +2523,7 @@
     "unknownUser": "未知用户"
   },
   "ai": {
+    "notConfigured": "AI 能力未启用：管理员尚未配置模型服务，功能暂时不可用",
     "completion": {
       "placeholder": "AI 正在续写...",
       "accept": "按 Tab 接受",
