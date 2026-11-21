@@ -115,6 +115,7 @@
     "fullscreen": "Fullscreen"
   },
   "nav": {
+    "mail": "Mail",
     "workspace": {
       "switch": "Switch workspace",
       "current": "Current workspace",
@@ -154,6 +155,7 @@
       "recycleBin": "Recycle Bin",
       "contacts": "Contacts",
       "govDoc": "Government Documents",
+      "mail": "Mail",
       "workflows": "Workflows",
       "okr": "OKR",
       "templates": "Templates",
@@ -4023,6 +4025,11 @@
     "deleteConfirm": "Delete this mail?",
     "draftSaved": "Draft saved",
     "noAccount": "Please add an email account first",
+    "sync": "Sync now",
+    "syncing": "Syncing…",
+    "syncDone": "Sync complete: {created} new messages",
+    "syncPartial": "Sync complete: {created} new, {failed} account(s) failed",
+    "syncFailed": "Sync failed. Check your account settings.",
     "selectAccount": "Select account",
     "updated": "Updated",
     "deleted": "Deleted",

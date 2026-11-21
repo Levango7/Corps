@@ -9,7 +9,7 @@ info:
     row for that workspace, then runs all tenant queries inside a transaction with
     app.workspace_id / app.user_id set (RLS binds at engine level in hardened
     deployments — see db/schema.sql).
-    Coverage: this contract declares 293 paths (updated 2026-11-19). The service also
+    Coverage: this contract declares 294 paths (updated 2026-11-22). The service also
     exposes additional routes that are not yet documented here; the authoritative
     gap list and its drift guard live in scripts/check_api_contract.py and
     scripts/api-contract-baseline.txt. New routes must be added here, or explicitly
@@ -10745,6 +10745,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Envelope_MailInbox'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/mail/sync:
+    post:
+      tags: [mail]
+      summary: Trigger IMAP sync for the current user's accounts in a workspace
+      description: >-
+        Syncs every email account owned by the logged-in user within the given
+        workspace; per-account writes go through scoped transactions. Rate
+        limited to 5 requests per minute. Returns a per-account
+        created/skipped/failed summary.
+      operationId: syncMailAccounts
+      parameters:
+        - $ref: '#/components/parameters/WidQuery'
+      responses:
+        '200':
+          description: Sync summary
         '401':
           $ref: '#/components/responses/Unauthorized'
         '500':
