@@ -6,3 +6,4 @@
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
 F:/Nexus/corps-wt-tier2 | chore/tier2-gaps | web/app/api/health/route.ts,web/tests/unit/health-route.test.ts,web/tests/integration/account-deletion-rls.test.ts,scripts/check_build_size.py,scripts/build-size-baseline.txt,.github/workflows/ci.yml | tier2 | 2026-11-21 23:56 | 2026-11-22 03:56 | 第2档三项：health 503 诊断字段加单测、账户删除真库 RLS 集成测试、构建体积预算门禁
 F:/Nexus/corps-wt-tier2 | chore/tier2-gaps | scripts/zero-coverage-baseline.txt | tier2 | 2026-11-22 00:13 | 2026-11-22 04:13 | health 加单测后基线豁免腐烂，删除该行（清偿非放宽）
+F:/Nexus/corps-wt-e2e-domains | feat/e2e-batch-remaining | web/e2e/announcement-draft.spec.ts web/e2e/knowledge-qa.spec.ts web/e2e/meeting-minutes.spec.ts web/e2e/assistant.spec.ts web/e2e/im.spec.ts | zcode | 2026-11-21T16:17Z | 2026-11-21T20:17Z | 剩余五域交互 E2E：announcement-draft（起草面板）+ knowledge-qa（问答面板）+ meeting-minutes（纪要面板）+ assistant（助手）+ im（消息列表/发送）；避开 AI 真调用，不碰 helpers.ts
