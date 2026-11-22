@@ -272,6 +272,16 @@ export const API_MESSAGES = {
     en: "The AI response could not be parsed this time. Please try again; contact an admin if it keeps happening.",
   },
 
+  /* ── AI 交付运行时（nexusloom sidecar；2026-11-22 接线）── */
+  aiDeliveryUnavailable: {
+    zh: "交付服务暂不可用（本地交付运行时未启动或繁忙），请稍后重试",
+    en: "Delivery service is unavailable (the local delivery runtime is down or busy). Please try again later.",
+  },
+  aiDeliveryTaskNotFound: {
+    zh: "交付任务不存在或已被清理",
+    en: "Delivery task not found or already purged.",
+  },
+
   /* ── 邮箱验证 ── */
   emailNotVerified: {
     zh: "邮箱尚未验证：请先点击注册邮件中的验证链接，再登录",
