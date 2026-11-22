@@ -42,8 +42,11 @@ function endISO(date: string): string {
 }
 
 const now = new Date();
-const defaultStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
-const defaultEnd = now.toISOString().slice(0, 10);
+// 默认区间按本地日历拼字符串，不走 toISOString——UTC 时区下本地月初会偏成前一天
+//（UTC+8 的 11-01 00:00 → ISO 2026-10-31，与组件渲染的本地月 1 号恒失配）
+const pad = (n: number) => String(n).padStart(2, "0");
+const defaultStart = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`;
+const defaultEnd = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 
 function paramsOf(call: unknown[]): URLSearchParams {
   const url = call[0] as string;

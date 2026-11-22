@@ -9,6 +9,7 @@
 
 import { use } from "react";
 import dynamic from "next/dynamic";
+import AiNotConfiguredBanner from "@/components/ai/AiNotConfiguredBanner";
 
 // P0-2: code splitting — AssistantPanel 改为 dynamic import 懒加载
 const AssistantPanel = dynamic(
@@ -21,5 +22,10 @@ const AssistantPanel = dynamic(
 
 export default function AssistantPage({ params }: { params: Promise<{ wid: string }> }) {
   const { wid } = use(params);
-  return <AssistantPanel wid={wid} />;
+  return (
+    <>
+      <AiNotConfiguredBanner />
+      <AssistantPanel wid={wid} />
+    </>
+  );
 }

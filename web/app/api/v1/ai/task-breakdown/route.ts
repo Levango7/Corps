@@ -14,6 +14,7 @@ import {
   aiNotConfiguredResponse,
   isAiConfigured,
   aiQuotaExceededResponse,
+  aiOutputFormatResponse,
 } from "@/lib/ai/shared";
 import { withUsageTracking } from "@/lib/ai/usage-middleware";
 import { buildTaskBreakdownSystemPrompt, buildUserPrompt } from "@/lib/ai/prompts/task-breakdown";
@@ -163,6 +164,8 @@ async function postAiTaskBreakdown(req: NextRequest) {
   } catch (error) {
     const quotaGuard = aiQuotaExceededResponse(req, error);
     if (quotaGuard) return quotaGuard;
+    const fmtGuard = aiOutputFormatResponse(req, error);
+    if (fmtGuard) return fmtGuard;
     console.error("[POST ai/task-breakdown] LLM error:", error);
     return NextResponse.json(
       { code: 500, message: apiMsg(req, "internalError"), data: null },

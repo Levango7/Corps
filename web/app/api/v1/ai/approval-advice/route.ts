@@ -17,6 +17,7 @@ import {
   aiNotConfiguredResponse,
   isAiConfigured,
   aiQuotaExceededResponse,
+  aiOutputFormatResponse,
 } from "@/lib/ai/shared";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
@@ -265,6 +266,8 @@ async function postAiApprovalAdvice(req: NextRequest) {
   } catch (error) {
     const quotaGuard = aiQuotaExceededResponse(req, error);
     if (quotaGuard) return quotaGuard;
+    const fmtGuard = aiOutputFormatResponse(req, error);
+    if (fmtGuard) return fmtGuard;
     console.error("[ai/approval-advice] error:", error);
     return NextResponse.json(
       { code: 500, message: apiMsg(req, "internalError"), data: null },
