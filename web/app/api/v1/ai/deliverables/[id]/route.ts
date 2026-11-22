@@ -9,7 +9,7 @@ import { getWorkspaceContextV2 } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
-import { LoomUnavailableError, assertSafeLoomId, getLoomTask } from "@/lib/ai/nexusloom";
+import { LoomUnavailableError, getLoomTask } from "@/lib/ai/nexusloom";
 import { withRed } from "@/lib/red-metrics";
 
 async function getDeliverableById(
