@@ -16,11 +16,13 @@ check_api_contract.py — OpenAPI 契约覆盖率防回归检查
     即：基线只允许收缩，不允许被"静默扩大"，也不允许修好后仍挂在豁免清单上。
 
 运行方式：
-    python scripts/check_api_contract.py
+    python scripts/check_api_contract.py               核对契约漂移
+    python scripts/check_api_contract.py --self-test   注入三组集合，守门器必须按预期判红/放行
+    python scripts/check_api_contract.py --write-baseline  维护用，重建基线（不在 CI 触发）
 
 退出码：
-    0 — 无新增未声明路由，且基线无已修未删条目
-    1 — 出现新的未声明路由（契约漂移），或基线含已声明/已删除的条目（豁免腐烂）
+    0 — 无新增未声明路由，且基线无已修未删条目（self-test：判据对自己的射程成立）
+    1 — 出现新的未声明路由，或基线含已声明/已删除的条目（self-test：判据对注入变异是盲的）
 """
 
 import re
@@ -111,7 +113,40 @@ def write_baseline(path: Path, routes: set[str]) -> None:
     path.write_text("\n".join(header + sorted(routes)) + "\n", encoding="utf-8")
 
 
+def evaluate(missing: set[str], baseline: set[str]) -> tuple[set[str], set[str]]:
+    """纯判据：返回（基线外新增未声明路由，基线中已不成立的条目）。
+
+    主检查与 --self-test 共用同一函数，杜绝「自证用一套、实战用另一套」。
+    只做集合运算，不读文件、不写基线、不碰真实数据。
+    """
+    return missing - baseline, baseline - missing
+
+
+def run_self_test() -> int:
+    """注入三组集合证明差集判据有射程：新增必红、基线腐烂必红、基线内放行。"""
+    cases = [
+        ({"A", "B"}, {"A"}, {"B"}, set(), "基线外新增未声明路由必须判红"),
+        ({"A"}, {"A", "B"}, set(), {"B"}, "基线含已声明/已删除条目必须判红（基线只许收缩）"),
+        ({"A"}, {"A"}, set(), set(), "基线内路由存在必须放行"),
+    ]
+    ok = True
+    for missing, baseline, exp_new, exp_stale, desc in cases:
+        new_drift, stale = evaluate(missing, baseline)
+        passed = new_drift == exp_new and stale == exp_stale
+        detail = f"new_drift={sorted(new_drift)}, stale={sorted(stale)}"
+        print(f"  {'PASS' if passed else 'FAIL'} {desc}: {detail}")
+        ok = ok and passed
+    if not ok:
+        print("SELF-TEST FAIL 差集判据对自己的射程是盲的，比没有门更糟")
+        return 1
+    print("SELF-TEST PASS 差集判据有射程（新增红 + 基线只许收缩 + 基线内放行）")
+    return 0
+
+
 def main() -> int:
+    if "--self-test" in sys.argv:
+        return run_self_test()
+
     project_root = Path(__file__).resolve().parent.parent
     api_dir = project_root / "web" / "app" / "api"
     openapi_path = project_root / "api" / "openapi.yaml"
@@ -148,9 +183,9 @@ def main() -> int:
     print(f"Baseline entries:        {len(baseline)}")
 
     # 1) 防恶化：基线外的新未声明路由 → 失败
-    new_drift = missing - baseline
     # 2) 防豁免腐烂：已声明或已删除的基线条目 → 同样失败
-    stale = baseline - missing
+    # 两判据抽成纯函数，主检查与 --self-test 共用，避免自证与实战漂移。
+    new_drift, stale = evaluate(missing, baseline)
 
     failed = False
     if new_drift:

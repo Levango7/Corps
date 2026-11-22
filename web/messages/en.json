@@ -115,6 +115,8 @@
     "fullscreen": "Fullscreen"
   },
   "nav": {
+    "mail": "Mail",
+    "deliverables": "Deliverables",
     "workspace": {
       "switch": "Switch workspace",
       "current": "Current workspace",
@@ -154,6 +156,8 @@
       "recycleBin": "Recycle Bin",
       "contacts": "Contacts",
       "govDoc": "Government Documents",
+      "mail": "Mail",
+      "deliverables": "Deliverables",
       "workflows": "Workflows",
       "okr": "OKR",
       "templates": "Templates",
@@ -2521,6 +2525,7 @@
     "unknownUser": "Unknown user"
   },
   "ai": {
+    "notConfigured": "AI features are disabled: no model service configured yet",
     "completion": {
       "placeholder": "AI is composing...",
       "accept": "Press Tab to accept",
@@ -3287,6 +3292,32 @@
       "close": "Close",
       "serviceUnavailable": "{name} is temporarily unavailable. Please try again.",
       "retry": "Reload & retry"
+    },
+    "delivery": {
+      "title": "AI Delivery",
+      "newTask": "New delivery task",
+      "queryLabel": "Topic or requirement",
+      "queryPlaceholder": "e.g. Write a guide to adopting agile development, covering background, key practices and rollout steps",
+      "pipelineLabel": "Pipeline",
+      "pipeline_docgen": "Standard document generation",
+      "pipeline_docgen_lean": "Standard + conditional verification (budget)",
+      "pipeline_docgen_verified": "Standard + fact checking",
+      "pipeline_docgen_render": "Standard + rendering (Word/PDF)",
+      "pipeline_kb_docgen": "Knowledge-base grounded",
+      "submit": "Submit task",
+      "submitting": "Submitting…",
+      "tasksTitle": "Delivery tasks",
+      "refresh": "Refresh list",
+      "loading": "Loading…",
+      "empty": "No delivery tasks yet",
+      "statusQueued": "Queued",
+      "statusRunning": "Running",
+      "statusDone": "Done",
+      "statusFailed": "Failed",
+      "sidecarDown": "Delivery service is not ready (local delivery runtime not started). Start the nexusloom service first.",
+      "noOutputYet": "No deliverable content to show yet",
+      "outputPath": "Output path",
+      "error": "Failed to load"
     }
   },
   "doc": {
@@ -4023,6 +4054,11 @@
     "deleteConfirm": "Delete this mail?",
     "draftSaved": "Draft saved",
     "noAccount": "Please add an email account first",
+    "sync": "Sync now",
+    "syncing": "Syncing…",
+    "syncDone": "Sync complete: {created} new messages",
+    "syncPartial": "Sync complete: {created} new, {failed} account(s) failed",
+    "syncFailed": "Sync failed. Check your account settings.",
     "selectAccount": "Select account",
     "updated": "Updated",
     "deleted": "Deleted",

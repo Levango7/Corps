@@ -70,6 +70,25 @@ export function aiQuotaExceededResponse(req: NextRequest, error: unknown): NextR
   }
   return null;
 }
+
+/**
+ * AI 输出格式异常的统一错误出口（2026-11-22：解析失败不再伪装成 500）。
+ *
+ * LLM 偶发返回不合规 JSON（截断 / 前后闲话 / 围栏残缺）是常态风险；此前这类失败
+ * 在各路由 catch 里统一落 500「服务器内部错误」——语义误导（像本服务坏了），
+ * 且用户不知道「重试可能就好」。判定集中在此（与 aiQuotaExceededResponse 同款
+ * 模式，路由侧不复制分支）：error 是 JSON.parse 的 SyntaxError → 返回 502 +
+ * 明确可重试文案；其余错误返回 null 继续走原 500 处理。
+ */
+export function aiOutputFormatResponse(req: NextRequest, error: unknown): NextResponse | null {
+  if (error instanceof SyntaxError) {
+    return NextResponse.json(
+      { code: 502, message: apiMsg(req, "aiOutputFormatError"), data: null },
+      { status: 502 },
+    );
+  }
+  return null;
+}
 /**
  * 获取当前用户 ID + 工作区 ID（用于 AI 使用量跟踪）。
  *

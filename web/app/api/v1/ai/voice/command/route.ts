@@ -24,6 +24,7 @@ import {
   aiNotConfiguredResponse,
   isAiConfigured,
   aiQuotaExceededResponse,
+  aiOutputFormatResponse,
 } from "@/lib/ai/shared";
 import { withUsageTracking } from "@/lib/ai/usage-middleware";
 import { cleanJsonResponse } from "@/lib/ai/orchestrator";
@@ -240,6 +241,8 @@ async function postAiVoiceCommand(req: NextRequest) {
   } catch (error) {
     const quotaGuard = aiQuotaExceededResponse(req, error);
     if (quotaGuard) return quotaGuard;
+    const fmtGuard = aiOutputFormatResponse(req, error);
+    if (fmtGuard) return fmtGuard;
     console.error("[POST ai/voice/command] error:", error);
     return NextResponse.json(
       { code: 500, message: apiMsg(req, "internalError"), data: null },

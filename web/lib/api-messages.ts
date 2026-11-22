@@ -43,6 +43,7 @@ export const API_MESSAGES = {
   /* ── 资源不存在 ── */
   taskNotFound: { zh: "任务不存在", en: "Task not found" },
   decisionNotFound: { zh: "决策不存在", en: "Decision not found" },
+  actionItemNotFound: { zh: "行动项不存在", en: "Action item not found" },
   documentNotFound: { zh: "文档不存在", en: "Document not found" },
   whiteboardNotFound: { zh: "白板不存在", en: "Whiteboard not found" },
   memberNotFound: { zh: "成员不存在", en: "Member not found" },
@@ -263,6 +264,22 @@ export const API_MESSAGES = {
   aiQuotaExceeded: {
     zh: "已达本工作区 AI 用量限额（Token 或调用次数），请联系工作区管理员调整限额，或等待额度自然重置（每日/每月）",
     en: "This workspace's AI usage limit has been reached (tokens or calls). Ask a workspace admin to raise the limit, or wait for the daily/monthly reset.",
+  },
+
+  /* ── AI 输出格式异常（2026-11-22：解析失败不再伪装 500，语义=上游模型输出不可解析，可重试）── */
+  aiOutputFormatError: {
+    zh: "AI 本次输出的内容无法解析，请重试一次；若持续出现请联系管理员",
+    en: "The AI response could not be parsed this time. Please try again; contact an admin if it keeps happening.",
+  },
+
+  /* ── AI 交付运行时（nexusloom sidecar；2026-11-22 接线）── */
+  aiDeliveryUnavailable: {
+    zh: "交付服务暂不可用（本地交付运行时未启动或繁忙），请稍后重试",
+    en: "Delivery service is unavailable (the local delivery runtime is down or busy). Please try again later.",
+  },
+  aiDeliveryTaskNotFound: {
+    zh: "交付任务不存在或已被清理",
+    en: "Delivery task not found or already purged.",
   },
 
   /* ── 邮箱验证 ── */

@@ -1,4 +1,5 @@
 import dynamic from "next/dynamic";
+import AiNotConfiguredBanner from "@/components/ai/AiNotConfiguredBanner";
 
 // P0-2: code splitting — AnnouncementDraftPanel 改为 dynamic import 懒加载
 const AnnouncementDraftPanel = dynamic(
@@ -18,6 +19,7 @@ export default async function AnnouncementDraftPage({
   const { wid } = await params;
   return (
     <main className="flex-1 min-w-0">
+      <AiNotConfiguredBanner />
       <AnnouncementDraftPanel wid={wid} />
     </main>
   );

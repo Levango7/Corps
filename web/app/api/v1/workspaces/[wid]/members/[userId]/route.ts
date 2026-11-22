@@ -5,6 +5,7 @@
 // - admin 可改/删 member；admin 不能改/删 admin、不能动 owner
 // - owner 可以改/删除自己以外的任何人；不能改/删自己
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 
@@ -107,6 +108,9 @@ async function patchMembersByUserId(
         { status: 403 },
       );
     }
+    // 角色变更后成员列表缓存立即失效（cachedQuery 30s 窗口内不得残留旧角色）
+    // 注：profile 必须是 { expire: 0 }（立即过期）——"max" 是 30 天长缓存策略，不是立即。
+    revalidateTag(`members:${wid}`, { expire: 0 });
     return NextResponse.json({ code: 200, data: result.updated });
   } catch (error) {
     console.error("[PATCH member] error:", error);
@@ -209,6 +213,9 @@ async function deleteMembersByUserId(
       }
     }
 
+    // 移除成员后成员列表缓存立即失效（否则移除后 30s 内列表仍含该成员）
+    // 注：profile 必须是 { expire: 0 }（立即过期）——"max" 是 30 天长缓存策略，不是立即。
+    revalidateTag(`members:${wid}`, { expire: 0 });
     return NextResponse.json({ code: 200, data: null });
   } catch (error) {
     console.error("[DELETE member] error:", error);

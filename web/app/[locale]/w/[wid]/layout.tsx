@@ -78,11 +78,24 @@ export default function WorkspaceLayout({
     track("page_view", { path: pathname });
 
     api<WorkspaceSummary[]>("/api/v1/workspaces")
-      .then((ws) => {
+      .then(async (ws) => {
         setWorkspaces(ws);
         const cur = ws.find((w) => w.id === wid);
-        if (cur) setWorkspace(cur);
-        else router.push("/auth/login");
+        if (!cur) {
+          router.push("/auth/login");
+          return;
+        }
+        // URL 直达也切 token：被邀请成员的 JWT wid 可能仍指向注册时工作区（不经切换器进入时），
+        // 先按当前 wid 重签再渲染子树，保证后续页面 API 的 wid 校验通过（与切换器同机制，幂等）。
+        try {
+          await api("/api/v1/auth/refresh", {
+            method: "POST",
+            body: JSON.stringify({ workspaceId: wid }),
+          });
+        } catch {
+          /* 换区失败保留当前令牌，由目标页的 401 兜底（与切换器同口径） */
+        }
+        setWorkspace(cur);
       })
       .catch(() => router.push("/auth/login"));
   }, [wid, router, pathname]);

@@ -1,4 +1,5 @@
 import dynamic from "next/dynamic";
+import AiNotConfiguredBanner from "@/components/ai/AiNotConfiguredBanner";
 
 // P0-2: code splitting — ProjectInsightView 改为 dynamic import 懒加载
 const ProjectInsightView = dynamic(
@@ -16,6 +17,7 @@ export default async function InsightPage({ params }: { params: Promise<{ wid: s
   const { wid } = await params;
   return (
     <main className="flex-1 min-w-0">
+      <AiNotConfiguredBanner />
       <ProjectInsightView wid={wid} />
     </main>
   );

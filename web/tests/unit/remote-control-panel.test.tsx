@@ -121,11 +121,12 @@ const sessions = [
   },
 ];
 
+// mock 与 GET /members 真实返回对齐：条目以 id 标识用户（无 userId 键）
 const members = {
   items: [
-    { userId: ME, name: "Me", email: "me@example.com", image: null, role: "owner" },
-    { userId: "u-2", name: null, email: "two@example.com", image: null, role: "member" },
-    { userId: "u-3", name: "Carol", email: "carol@example.com", image: null, role: "member" },
+    { id: ME, name: "Me", email: "me@example.com", image: null, role: "owner" },
+    { id: "u-2", name: null, email: "two@example.com", image: null, role: "member" },
+    { id: "u-3", name: "Carol", email: "carol@example.com", image: null, role: "member" },
   ],
 };
 

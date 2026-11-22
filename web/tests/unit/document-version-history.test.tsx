@@ -315,12 +315,13 @@ describe("DocumentVersionHistory", () => {
   });
 
   it("创建版本：空说明 POST body message=null；填写后 message 原文；成功后收起表单并刷新列表", async () => {
-    mocks.api
-      .mockResolvedValueOnce(listPayload([]))
-      .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce(listPayload([]))
-      .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce(listPayload([]));
+    // 列表 GET 与创建 POST 同走 BASE：按 method 分发代替位置队列（期望值不变）
+    mocks.api.mockImplementation((url: string, opts?: { method?: string }) => {
+      if (url !== BASE) return Promise.reject(new Error(`unexpected api call: ${url}`));
+      return opts?.method === "POST"
+        ? Promise.resolve(undefined)
+        : Promise.resolve(listPayload([]));
+    });
     renderHistory();
     await waitFor(() => expect(screen.getByText("document:versionEmpty")).toBeInTheDocument());
 

@@ -96,7 +96,10 @@ beforeEach(() => {
   mocks.api.mockReset();
   mocks.toast.mockReset();
 });
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 describe("MultiAgentPanel", () => {
   it("空态：noAgents 文案 + 空态创建按钮可用", async () => {

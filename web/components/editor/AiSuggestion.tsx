@@ -52,6 +52,9 @@ export function AiSuggestion({ editor }: AiSuggestionProps) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** ghost 文本 ref：keydown handler 需同步读取最新值，避免 stale closure */
   const ghostRef = useRef("");
+  /** loading ref：keydown/selection handler 需同步读取最新值，避免 stale closure */
+  const loadingRef = useRef(loading);
+  loadingRef.current = loading;
 
   /** 接受续写：用 ProseMirror transaction 在光标处插入纯文本 */
   const accept = useCallback(() => {
@@ -158,13 +161,13 @@ export function AiSuggestion({ editor }: AiSuggestionProps) {
   useEffect(() => {
     if (!editor) return;
     const handler = () => {
-      if (ghostRef.current || loading) dismiss();
+      if (ghostRef.current || loadingRef.current) dismiss();
     };
     editor.on("selectionUpdate", handler);
     return () => {
       editor.off("selectionUpdate", handler);
     };
-  }, [editor, dismiss, loading]);
+  }, [editor, dismiss]);
 
   // 监听 Tab/Esc：capture 阶段确保先于 ProseMirror 处理
   useEffect(() => {
@@ -174,7 +177,7 @@ export function AiSuggestion({ editor }: AiSuggestionProps) {
         event.preventDefault();
         event.stopPropagation();
         accept();
-      } else if (event.key === "Escape" && (ghostRef.current || loading)) {
+      } else if (event.key === "Escape" && (ghostRef.current || loadingRef.current)) {
         event.preventDefault();
         event.stopPropagation();
         dismiss();
@@ -182,7 +185,7 @@ export function AiSuggestion({ editor }: AiSuggestionProps) {
     };
     editor.view.dom.addEventListener("keydown", handler, true);
     return () => editor.view.dom.removeEventListener("keydown", handler, true);
-  }, [editor, accept, dismiss, loading]);
+  }, [editor, accept, dismiss]);
 
   // 卸载清理
   useEffect(() => {

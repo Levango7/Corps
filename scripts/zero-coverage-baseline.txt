@@ -22,7 +22,6 @@ app/api/cron/recycle-cleanup/route.ts
 app/api/cron/weekly-digest/route.ts
 app/api/documents/share/[token]/route.ts
 app/api/documents/share/[token]/verify/route.ts
-app/api/health/route.ts
 app/api/tasks/share/[token]/route.ts
 app/api/uploads/[...path]/route.ts
 app/api/v1/ai/agents/[id]/messages/route.ts
@@ -48,6 +47,8 @@ app/api/v1/ai/conversations/[id]/route.ts
 app/api/v1/ai/conversations/route.ts
 app/api/v1/ai/daily-report/route.ts
 app/api/v1/ai/decision-assistant/route.ts
+app/api/v1/ai/deliverables/[id]/route.ts
+app/api/v1/ai/deliverables/route.ts
 app/api/v1/ai/doc-qa/route.ts
 app/api/v1/ai/feedback/route.ts
 app/api/v1/ai/follow-up-suggestions/route.ts
@@ -121,6 +122,7 @@ app/api/v1/mail/accounts/[id]/route.ts
 app/api/v1/mail/accounts/route.ts
 app/api/v1/mail/inbox/route.ts
 app/api/v1/mail/send/route.ts
+app/api/v1/mail/sync/route.ts
 app/api/v1/notifications/[id]/route.ts
 app/api/v1/notifications/preferences/route.ts
 app/api/v1/notifications/unread/route.ts
@@ -267,6 +269,10 @@ app/api/v1/workspaces/[wid]/spaces/route.ts
 app/api/v1/workspaces/[wid]/tasks/[id]/calendar-sync/route.ts
 app/api/v1/workspaces/[wid]/tasks/[id]/comments/route.ts
 app/api/v1/workspaces/[wid]/tasks/[id]/conversation/route.ts
+# #95：两条 action-items 路由的行为由 tests/integration/decision-action-sync.test.ts
+# 在 CI 的 e2e job（生产构建）里覆盖；单测不 import 路由模块，故此处登记 0 行覆盖。
+app/api/v1/workspaces/[wid]/tasks/[id]/decisions/[did]/action-items/[itemId]/route.ts
+app/api/v1/workspaces/[wid]/tasks/[id]/decisions/[did]/action-items/route.ts
 app/api/v1/workspaces/[wid]/tasks/[id]/decisions/[did]/route.ts
 app/api/v1/workspaces/[wid]/tasks/[id]/decisions/[did]/sync-actions/route.ts
 app/api/v1/workspaces/[wid]/tasks/[id]/decisions/[did]/versions/route.ts
