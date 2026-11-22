@@ -24,6 +24,7 @@ import { createAiProgressStream } from "@/lib/ai/stream";
 import { assertAiUsageQuota } from "@/lib/ai/usage-limit";
 import { authFailure } from "@/lib/auth-response";
 import { withRed } from "@/lib/red-metrics";
+import { createLoomDailyReportStream } from "@/lib/ai/loom-runtime";
 
 const schema = z.object({
   wid: z.string().uuid(),
@@ -117,18 +118,44 @@ async function postAiDailyReport(req: NextRequest) {
     // 真拦截（2026-10-08）：流式路径不经 withUsageTracking，发起模型调用前
     // 显式断言配额；超限抛 AiQuotaExceededError，由下方 catch 映射 429。
     await assertAiUsageQuota(ctx.payload.sub, body.wid);
+    const buildPrompt = async () => {
+      const context = await runWithWorkspace(
+        body.wid,
+        (tx) => buildAiContext(body.wid, targetUserId, DAILY_SCOPES, tx),
+        ctx.payload.sub,
+      );
+      return buildUserPrompt(context, { date: body.date });
+    };
+    const stages = {
+      context: "正在聚合日报数据…",
+      analyzing: "正在分析数据…",
+      generating: "正在生成日报…",
+    };
+
+    // 可选 sidecar：登录/RLS/反馈/配额仍由本路由负责，模型执行与质量尾交给
+    // nexusloom；未配置时维持原有 streamText，便于灰度与回退。
+    if (process.env.LOOM_RUNTIME_URL) {
+      return createLoomDailyReportStream({
+        baseUrl: process.env.LOOM_RUNTIME_URL,
+        apiKey: process.env.LOOM_RUNTIME_API_KEY,
+        system: withCoT(buildDailyReportSystemPrompt(feedbackExamples), requireDefaultModel()),
+        buildPrompt,
+        title: body.date ? `日报 ${body.date}` : "工作区日报",
+        stages,
+        usageTracking: {
+          workspaceId: body.wid,
+          userId: ctx.payload.sub,
+          capability: "daily-report",
+          model: requireDefaultModel().modelId,
+        },
+      });
+    }
+
     return createAiProgressStream(
       {
         model: requireDefaultModel(),
         system: withCoT(buildDailyReportSystemPrompt(feedbackExamples), requireDefaultModel()),
-        buildPrompt: async () => {
-          const context = await runWithWorkspace(
-            body.wid,
-            (tx) => buildAiContext(body.wid, targetUserId, DAILY_SCOPES, tx),
-            ctx.payload.sub,
-          );
-          return buildUserPrompt(context, { date: body.date });
-        },
+        buildPrompt,
         usageTracking: {
           workspaceId: body.wid,
           userId: ctx.payload.sub,
@@ -136,11 +163,7 @@ async function postAiDailyReport(req: NextRequest) {
           model: requireDefaultModel().modelId,
         },
       },
-      {
-        context: "正在聚合日报数据…",
-        analyzing: "正在分析数据…",
-        generating: "正在生成日报…",
-      },
+      stages,
     );
   } catch (error) {
     const quotaGuard = aiQuotaExceededResponse(req, error);
