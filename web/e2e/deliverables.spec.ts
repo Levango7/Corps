@@ -12,9 +12,9 @@ test.describe("AI 交付", () => {
     await page.goto(`/w/${wid}/deliverables`);
     // h1=nav.deliverables（「交付」）；页内 h3「交付任务」「新建交付任务」是子串，
     // 用 exact + level 1 防歧义
-    await expect(
-      page.getByRole("heading", { name: "交付", exact: true, level: 1 }),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("heading", { name: "交付", exact: true, level: 1 })).toBeVisible({
+      timeout: 20_000,
+    });
     await expect(page.getByLabel("主题或需求")).toBeVisible({ timeout: 20_000 });
     await expect(page.getByLabel("流水线")).toBeVisible({ timeout: 10_000 });
     await expect(page.getByRole("button", { name: "提交任务" })).toBeVisible({ timeout: 10_000 });
