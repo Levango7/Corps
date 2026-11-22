@@ -17,6 +17,7 @@ import {
   aiNotConfiguredResponse,
   isAiConfigured,
   aiQuotaExceededResponse,
+  aiOutputFormatResponse,
 } from "@/lib/ai/shared";
 import { withUsageTracking } from "@/lib/ai/usage-middleware";
 import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
@@ -250,6 +251,8 @@ async function postAiAnalysisTeamPerformance(req: NextRequest) {
   } catch (error) {
     const quotaGuard = aiQuotaExceededResponse(req, error);
     if (quotaGuard) return quotaGuard;
+    const fmtGuard = aiOutputFormatResponse(req, error);
+    if (fmtGuard) return fmtGuard;
     console.error("[ai/analysis/team-performance] error:", error);
     return NextResponse.json(
       { code: 500, message: apiMsg(req, "internalError"), data: null },
