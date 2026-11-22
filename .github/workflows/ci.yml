@@ -838,6 +838,16 @@ jobs:
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: npx prisma generate
       - run: pnpm run build
+      # 构建体积预算（2026-11-21 接入）：上面所有门禁只判「代码对不对」，
+      # 没有一道看「打包出来多大」。一次整包导入能让 First Load JS 翻倍，
+      # 而构建成功、全部门禁全绿，只有真实用户的流量与首屏在变差。
+      # 判据：web/.next/{static,standalone} 对比 scripts/build-size-baseline.txt，
+      # 超 5% 判红；--self-test 注入四组合成数字证明判据有射程。
+      # 基线缺失时打印实测值并 NO BASELINE 放行（首次接入无法预知真实体积）。
+      - name: Check build size budget
+        run: python ../scripts/check_build_size.py
+      - name: Mutation-check the build size guard itself
+        run: python ../scripts/check_build_size.py --self-test
 
   # ─── 产物化：构建并发布 Docker 镜像到 GitHub Container Registry（GHCR）───
   # 取代原 CloudBase 占位部署（此前刻意 exit 1 防假绿）。镜像即部署产物：

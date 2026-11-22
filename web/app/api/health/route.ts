@@ -53,7 +53,18 @@ async function getHealth(req: NextRequest) {
     return NextResponse.json(
       {
         code: 503,
-        data: { status: "degraded", db: "down" },
+        data: {
+          status: "degraded",
+          db: "down",
+          // 诊断字段（不含任何敏感信息）：让 503 的排查不必去翻日志就能区分
+          // 「DB 挂起超时」与「连接/鉴权失败」。
+          //   isTimeout   : Promise.race 的 2s 超时分支（DB 无响应）
+          //   prismaCode  : 仅白名单 P####，是 Prisma 的公开错误码，不含主机/端口
+          // 刻意不带 err.message / stack：Prisma 的 message 常含主机名+端口甚至
+          // 连接串，写进响应体等于把 DATABASE_URL 泄露给未授权探活方。
+          isTimeout,
+          ...(prismaCode ? { prismaCode } : {}),
+        },
         message: apiMsg(req, "databaseUnreachable"),
       },
       { status: 503 },
