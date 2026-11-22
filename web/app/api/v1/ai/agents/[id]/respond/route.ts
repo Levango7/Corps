@@ -24,6 +24,7 @@ import {
   aiNotConfiguredResponse,
   isAiConfigured,
   aiQuotaExceededResponse,
+  aiOutputFormatResponse,
 } from "@/lib/ai/shared";
 import { withUsageTracking } from "@/lib/ai/usage-middleware";
 import { cleanJsonResponse } from "@/lib/ai/orchestrator";
@@ -291,6 +292,8 @@ async function postAiAgentsRespondById(req: NextRequest) {
   } catch (error) {
     const quotaGuard = aiQuotaExceededResponse(req, error);
     if (quotaGuard) return quotaGuard;
+    const fmtGuard = aiOutputFormatResponse(req, error);
+    if (fmtGuard) return fmtGuard;
     // Agent 不存在时返回 404
     if (error instanceof Error && error.message === "AGENT_NOT_FOUND") {
       return NextResponse.json(

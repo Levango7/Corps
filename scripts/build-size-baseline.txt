@@ -1,0 +1,11 @@
+# 构建体积基线（字节）— 由 scripts/check_build_size.py --emit 生成
+#
+# 判据：任一指标超过本基线 × 1.05 判红。收紧基线是人工动作，
+# 只在确认体积增长合理后执行，并在 PR 描述里说明原因。
+# 口径与边界见脚本 docstring。
+#
+# 2026-11-21 首次定标：CI build job 实测（PR #379，run 44922460967 /
+# job 136902928145）。static = web/.next/static（客户端资源），
+# standalone = web/.next/standalone（部署产物）。
+static=10684172
+standalone=82972117

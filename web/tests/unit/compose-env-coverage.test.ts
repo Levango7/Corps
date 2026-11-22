@@ -58,6 +58,12 @@ const EXEMPT = new Set([
   "PUSH_ADMIN_USER_IDS",
   // AI/OpenAI 可选功能密钥（未配置时降级为空字符串）
   "OPENAI_API_KEY",
+  // AI 网关地址覆盖（可选，默认官方端点；代理/私有网关场景用）
+  "DEEPSEEK_BASE_URL",
+  "OPENAI_BASE_URL",
+  // nexusloom 交付运行时 sidecar（可选；默认本机回环 Admin API，key 仅私网部署需要）
+  "NEXUSLOOM_URL",
+  "NEXUSLOOM_API_KEY",
   // LiveKit 音视频服务配置（未配置时 meetings 路由返回 501）
   "LIVEKIT_TOKEN_TTL",
   // 附件域名白名单（可选，未配置时使用默认值）

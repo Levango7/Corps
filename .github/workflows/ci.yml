@@ -407,6 +407,22 @@ jobs:
         run: python scripts/check_openapi_impl_coverage.py
       - name: Mutation-check the ghost-path guard itself
         run: python scripts/check_openapi_impl_coverage.py --self-test
+      # 2026-11-21：上面所有契约门禁都自带 --self-test，唯独最基础的
+      # check_api_contract.py 没有——它是全部「契约漂移」判定的根，若差集判据
+      # 被改空（例如恒返空集），其余 self-test 全绿也发现不了。本步注入三组
+      # 集合：基线外新增 route 必红、基线含已成立条目必红、基线内条目放行；
+      # self-test 只跑内存集合，不读/写真实基线文件。
+      - name: Mutation-check the API contract path guard itself
+        run: python scripts/check_api_contract.py --self-test
+      # 2026-11-21：dependabot 家族分组此前只是手动核对工具（脚本 docstring
+      # 自述「未接入 CI」）：分组一旦被并回单个大组（#257 的 26 依赖跨 5 家族
+      # 挤一个 PR）或漏锁 minor+patch，机器人会周期性重建无法按家族审/回滚的
+      # 红 PR。脚本自带两个变异 self-test 证明判据有射程。挂本 job 因为这里
+      # 已装 PyYAML、且是 required check（新开 job 不在清单里拦不住合并）。
+      - name: Check dependabot family groups
+        run: python scripts/check_dependabot_groups.py
+      - name: Mutation-check the dependabot groups guard itself
+        run: python scripts/check_dependabot_groups.py --self-test
 
   # 角色权限矩阵落地缺口防回归：判定口径是 handler 级（同文件内 DELETE 有门禁、
   # PATCH 没有的情形真实存在，按文件统计会误判为已覆盖）。
@@ -460,8 +476,22 @@ jobs:
       - run: pnpm install --frozen-lockfile --ignore-scripts
       # 仅审计生产依赖；--audit-level=high 表示 high/critical 漏洞会让命令退出非 0
       # moderate/low 漏洞会打印但不影响退出码，避免过度阻塞迭代
+      # --ignore：精准豁免 2026-11-18 新披露的 picomatch ReDoS（GHSA-fc5q-39xc-vjpf）。
+      #   上游最新 4.0.7 仍受影响、暂无修复版；该包仅用于构建期 glob 匹配，
+      #   运行时不接受用户输入作 glob 模式，实际可利用性低。
+      #   复核期限 2026-12-31：picomatch 发布 >4.0.7 后必须移除本豁免。
+      #   其余 high/critical 漏洞仍照常阻断。
       - name: Audit production deps (high/critical block CI)
-        run: pnpm audit --prod --audit-level=high
+        run: pnpm audit --prod --audit-level=high --ignore=GHSA-fc5q-39xc-vjpf
+      # 豁免到期探测（2026-11-21 补）：上面的人工注释期限是提醒，不是判据 ——
+      # 若 12-31 之前上游就发了修复版，CI 仍会静默带着 --ignore 放行。
+      # 本门禁每次 CI 查 npm registry 的 picomatch latest，>4.0.7 即判红，
+      # 强制移除豁免并升级；取数失败 UNDETERMINED 判红，不静默跳过。
+      # 挂 audit job（已是 required），新开 job 不在必需清单里拦不住合并。
+      - name: Detect upstream fix for picomatch advisory (invalidate ignore)
+        run: python ../scripts/check_picomatch_fix.py
+      - name: Mutation-check the picomatch fix detector itself
+        run: python ../scripts/check_picomatch_fix.py --self-test
       # audit 失败时打印完整 advisory 列表（定位阻断漏洞名）
       - name: Audit details on failure
         if: failure()
@@ -808,6 +838,16 @@ jobs:
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: npx prisma generate
       - run: pnpm run build
+      # 构建体积预算（2026-11-21 接入）：上面所有门禁只判「代码对不对」，
+      # 没有一道看「打包出来多大」。一次整包导入能让 First Load JS 翻倍，
+      # 而构建成功、全部门禁全绿，只有真实用户的流量与首屏在变差。
+      # 判据：web/.next/{static,standalone} 对比 scripts/build-size-baseline.txt，
+      # 超 5% 判红；--self-test 注入四组合成数字证明判据有射程。
+      # 基线缺失时打印实测值并 NO BASELINE 放行（首次接入无法预知真实体积）。
+      - name: Check build size budget
+        run: python ../scripts/check_build_size.py
+      - name: Mutation-check the build size guard itself
+        run: python ../scripts/check_build_size.py --self-test
 
   # ─── 产物化：构建并发布 Docker 镜像到 GitHub Container Registry（GHCR）───
   # 取代原 CloudBase 占位部署（此前刻意 exit 1 防假绿）。镜像即部署产物：

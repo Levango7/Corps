@@ -47,6 +47,7 @@ import {
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { SafeComponent } from "@/components/SafeComponent";
+import AiNotConfiguredBanner from "@/components/ai/AiNotConfiguredBanner";
 
 // P0-2: code splitting — 重型 AI 面板组件改为 dynamic import 懒加载
 const SemanticSearchPanel = dynamic(
@@ -394,6 +395,9 @@ export default function AiToolsPage({ params }: { params: Promise<{ wid: string 
             {t("title")}
           </h1>
         </header>
+
+        {/* ─── AI 未配置提示（已配置时渲染 null，面板保留不破坏深链） ─── */}
+        <AiNotConfiguredBanner />
 
         {/* ─── Tab 导航栏 ─── */}
         <nav

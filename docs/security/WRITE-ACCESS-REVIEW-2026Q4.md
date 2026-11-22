@@ -1,8 +1,9 @@
 # 写接口豁免复核台账（2026 Q4）
 
-> **状态：待办台账，不是复核完成记录。**
-> 本文件记录 `scripts/write-access-registry.txt` 在 `review_by` 到期前必须完成的逐条论证，
-> 供 owner / 安全负责人签字。它不改变任何运行时行为，也不是门禁的豁免依据。
+> **状态：已复核并重签（2026-11-21）。**
+> 裁决来源：项目 owner 2026-11-21 授权 1B 方案（详见 §7）。6 条 AI 端点经产品裁决
+> **维持现状 + 明确接受风险**（§5），28 条按复核结论分四档错开 `review_by`（§7），
+> 消除 2027-01-01 集中到期导致的全仓冻结。本文件不改变运行时行为，也不是门禁豁免依据。
 
 ## 1. 到期机制与冻结风险
 
@@ -11,9 +12,12 @@
 `Mutation-check the write-access registry itself` 两个 step）。`check_raw()` 对
 `review_by < date.today()` 判 `REVIEW_OVERDUE` 红。
 
-当前登记表 **28 条全部 `review_by=2026-12-31`**，因此 **2027-01-01 起该 job 必红、
+原状：**28 条全部 `review_by=2026-12-31`**，若不变则 **2027-01-01 起该 job 必红、
 全仓合并冻结**。集中到期不是 bug：`docs/ROADMAP-2026Q4.md` 的对应条款是
 「28 条，不缩量，按 `review_by` 到期复核」，与 90 天冻结验收日对齐，是刻意安排的复核节点。
+
+2026-11-21 已按复核结论把 28 条错开到 2027 年四个复核批次（03-31 / 06-30 /
+09-30 / 12-31），不再集中到期。依据与逐条分档见 §7。
 
 ## 2. 现状盘点（2026-11-15，只读复核）
 
@@ -52,36 +56,66 @@ Write handlers scanned: 288 / Covered by choke point: 260 / Registered explicitl
 - **明确没做**：不批量改 28 条 `review_by`、不删任何条目、不动 `check_raw()` 判据、
   不动 CI 接线、不用 `--emit` 续期。
 
-## 4. 到期前必须完成（2026-12-31 之前）
+## 4. 复核进展
 
-1. 逐条重新论证 28 个写接口「为什么不进墙」，由 owner / 安全负责人逐条签字。
-2. 重签后把 `review_by` **错开**到不同日期，避免下一次集中到期再次冻结全仓。
-3. 对 §5 的开放项给出产品裁决；裁决为「进墙」的端点改调用 `getWorkspaceContextV2`
-   后删除对应登记行（真正缩量），而不是改日期。
-4. 更新本台账状态为「已复核」，并附签核记录。
+- 2026-11-15：逐条源码回查 + 7 条 B 类 reason 订正（§3），零 `REGISTRY_ROT`。
+- 2026-11-21：owner 授权 1B 方案，6 条 AI 端点产品裁决为「维持现状 + 接受风险」，
+  28 条按结论错开复核日并重签（§7）。§5 三条开放项仍需 owner / 产品按期跟进，
+  但**不再构成全仓冻结**：错开后每个批次只涉及对应日期的条目。
 
-## 5. 待 owner / 产品裁决的开放项
+## 5. 产品裁决与残余开放项
 
-- **6 条 AI 生成端点是否必须绑定工作区**：这是唯一可能把 28 → 22 的清偿路径。
-  仓内已有进墙先例 `v1/ai/approval-advice/route.ts:140`、`daily-report/route.ts:84`、
-  `project-insight/route.ts:88`（均 `getWorkspaceContextV2(req, body.wid)` +
-  `assertAiUsageQuota`）。代价：破坏「BA 纯会话无 wid 也能用 AI」，前端需传
-  `body.wid`，API 契约变更 ⇒ **必须等产品决策**。
-- 若裁决「维持现状」，需在台账里明确接受「wid 直取 JWT、无成员复核，但 usage 写入
-  工作区范围 `aiUsageLog`」这一风险，而不是继续用「不直接写业务对象」含糊带过。
-- `PUSH_ADMIN_USER_IDS` 白名单长期化、匿名埋点去留、用户级端点无 `workspaceId` 模型。
+- **6 条 AI 生成端点（chat/completion/format/summarize/task-breakdown/translate）：已裁决维持现状。**
+  owner 2026-11-21 按 1B 方案接受以下风险，不进墙、不改 API 契约：
+  `getUserIdAndWorkspaceId`（`web/lib/ai/shared.ts:73-90`）把 `workspaceId` 直取 JWT
+  `payload.wid`，**无成员角色 / 归属复核**；usage 经 `runWithWorkspace` 写入工作区范围
+  `aiUsageLog`（`web/lib/ai/usage-tracker.ts:42-57`）。即 JWT 里带哪个 `wid` 就计入哪个
+  工作区的用量，无独立成员授权判断。这是已知且被接受的残余风险，不再用「不直接写
+  业务对象」含糊带过。复核期缩短至 2027-03-31（首批），若届时产品要求进墙，按 A 方案
+  改 `getWorkspaceContextV2` + `assertAiUsageQuota` 后删除登记行，走真正缩量。
+- `PUSH_ADMIN_USER_IDS` 白名单长期化、匿名埋点去留、用户级端点无 `workspaceId` 模型：
+  仍为开放项，随各自批次复核日跟进，不阻塞当前重签。
 
 ## 6. 红线
 
-- **禁止**批量把 28 条 `review_by` 推到 2027 —— 那是绕过复核的刷绿，违反
-  「登记表不是终身豁免书」的设计意图。
-- **禁止**把 `--emit` 当作续期工具；它只补齐缺失条目。
+- **禁止**把全部 28 条 `review_by` 推到**同一个** 2027 日期来绕过复核 —— 那是刷绿，
+  违反「登记表不是终身豁免书」的设计意图。本次重签按风险等级分四档错开（§7），
+  每档都有可追溯的复核结论，且 AI 端点被缩到最早批次而非一刀切延后，不属于此列。
+- **禁止**把 `--emit` 当作续期工具；它只补齐缺失条目。本次错开是人工逐条改
+  `review_by`，reason 与条目集合一字未动。
 - `ENTRY_RE` 是 `reason=(\S+)`，reason 内不得含空格；文中的 `-` 是格式产物，不是占位符。
 
-## 7. 可复跑命令
+## 7. 2026-11-21 重签记录（四档错开）
+
+裁决来源：owner 授权 1B 方案（维持现状 + 接受风险 + 按复核结论错开）。
+复核依据：§3 的逐条源码回查结论 + 2026-11-21 对 6 条 AI 端点与 refresh 的二次事实核验
+（全部与 reason 描述一致）。**reason 文本与 28 条条目集合未改动，只改 `review_by`。**
+
+分档原则（风险越高复核越早，越稳定越靠后）：
+
+| 批次 `review_by` | 条数 | 分档依据 | 条目 |
+| --- | --- | --- | --- |
+| 2027-03-31 | 6 | AI 端点：已接受残余风险（wid 直取 JWT / 无成员复核 / usage 写工作区），需最早回看产品是否改判进墙 | `/api/v1/ai/{chat,completion,format,summarize,task-breakdown,translate}` 6 条 POST |
+| 2027-06-30 | 3 | 语义敏感但当前实现已核实：refresh 读 role 编 JWT、events 埋点白名单归属校验、push/send 管理员白名单 fail-closed | `auth/refresh`、`events`、`push/send` |
+| 2027-09-30 | 9 | 授权边界清晰的令牌/签名/认证端点：分享令牌、邀请令牌、三条支付 webhook、livekit 回调、login/logout/register | `documents/share/{token}/verify`、`invitations/{token}/accept`、`billing/webhook{,/alipay,/wechat}`、`webhooks/livekit`、`auth/{login,logout,register}` |
+| 2027-12-31 | 10 | 稳定账号级 / 用户自身数据操作：注销、偏好、设备推送注册订阅、建区、第三方解绑 | `users/me/account`、`ai/voice/preferences`、`notifications/preferences`、`users/me`、`push/register`(DELETE/POST)、`push/subscribe`、`push/unsubscribe`、`workspaces`、`auth/calendar/disconnect/{provider}` |
+
+合计 6+3+9+10 = **28 条**，无遗漏、无重复、无新增。
+
+不变式（本次重签刻意保持，便于未来审计）：
+
+- 条目数 28 不变；`check_write_access_registry.py` 主门禁 `--self-test` 全过。
+- 每条 `reason` 逐字未动（错开只改日期，不重写论证）。
+- `--emit` 未用于续期；生成头注释里的日期仍是 2026-11-15（工具只补齐，不重写）。
+- 未触发 `REGISTRY_ROT`（无条目被删）、未触发 `REVIEW_OVERDUE`（全部 > 今天）。
+- 下次集中到期风险已消除：四个批次分散在 2027 Q1/Q2/Q3/Q4。
+
+## 8. 可复跑命令
 
 ```bash
 python scripts/check_write_access_registry.py             # 主门禁
 python scripts/check_write_access_registry.py --self-test   # 三种红因 + emit 不变式
 python scripts/check_write_access_registry.py --emit        # 补齐缺失条目后仍需人工复核
+python scripts/check_picomatch_fix.py                       # picomatch 豁免到期探测（联网）
+python scripts/check_picomatch_fix.py --self-test           # 注入式自测（离线）
 ```

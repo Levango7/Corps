@@ -115,6 +115,8 @@
     "fullscreen": "全屏"
   },
   "nav": {
+    "mail": "邮箱",
+    "deliverables": "交付",
     "workspace": {
       "switch": "切换工作区",
       "current": "当前工作区",
@@ -154,6 +156,8 @@
       "recycleBin": "回收站",
       "contacts": "通讯录",
       "govDoc": "公文",
+      "mail": "邮箱",
+      "deliverables": "交付",
       "workflows": "工作流",
       "okr": "OKR",
       "templates": "项目模板",
@@ -2521,6 +2525,7 @@
     "unknownUser": "未知用户"
   },
   "ai": {
+    "notConfigured": "AI 能力未启用：管理员尚未配置模型服务，功能暂时不可用",
     "completion": {
       "placeholder": "AI 正在续写...",
       "accept": "按 Tab 接受",
@@ -3287,6 +3292,32 @@
       "close": "关闭",
       "serviceUnavailable": "{name} 服务暂时不可用，请重试",
       "retry": "刷新重试"
+    },
+    "delivery": {
+      "title": "AI 交付",
+      "newTask": "新建交付任务",
+      "queryLabel": "主题或需求",
+      "queryPlaceholder": "例：写一份《敏捷开发落地指引》，包含背景、关键实践与落地步骤",
+      "pipelineLabel": "流水线",
+      "pipeline_docgen": "标准文档生成",
+      "pipeline_docgen_lean": "标准 + 条件核查（省钱）",
+      "pipeline_docgen_verified": "标准 + 事实核查",
+      "pipeline_docgen_render": "标准 + 渲染（Word/PDF）",
+      "pipeline_kb_docgen": "知识库接地生成",
+      "submit": "提交任务",
+      "submitting": "提交中…",
+      "tasksTitle": "交付任务",
+      "refresh": "刷新列表",
+      "loading": "加载中…",
+      "empty": "还没有交付任务",
+      "statusQueued": "排队中",
+      "statusRunning": "生成中",
+      "statusDone": "已完成",
+      "statusFailed": "失败",
+      "sidecarDown": "交付服务未就绪（本地交付运行时未启动），请先启动 nexusloom 服务",
+      "noOutputYet": "该任务暂无可展示的交付内容",
+      "outputPath": "产出路径",
+      "error": "加载失败"
     }
   },
   "doc": {
@@ -4023,6 +4054,11 @@
     "deleteConfirm": "确认删除该邮件？",
     "draftSaved": "草稿已保存",
     "noAccount": "请先添加邮箱账户",
+    "sync": "立即同步",
+    "syncing": "同步中…",
+    "syncDone": "同步完成：新增 {created} 封",
+    "syncPartial": "同步完成：新增 {created} 封，{failed} 个账户失败",
+    "syncFailed": "同步失败，请检查账户配置",
     "selectAccount": "选择账户",
     "updated": "已更新",
     "deleted": "已删除",

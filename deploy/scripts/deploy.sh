@@ -60,6 +60,10 @@ load_prod_env
 # 在任何可能失败的步骤之前赋值——若在赋值前就崩，自动回滚无据可依
 DEPLOY_FROM_TAG=""
 AUTO_ROLLBACK_ARMED=0
+# 第 3 步备份成功后记下本次上线前快照的实际路径。
+# 迁移失败时的恢复依据（见 trigger_rollback）：没有它，恢复输出只能指向
+# "第 3 步的备份"，人在事故现场还得去备份目录里猜是哪一份。
+PREDEPLOY_BACKUP=""
 
 # 任何失败都触发回滚的 trap。
 # 为什么用 trap 而不是逐步 if：部署中途的失败点不止"健康检查"一处
@@ -86,13 +90,17 @@ trigger_rollback() {
   if [[ -x "${rb}" || -f "${rb}" ]]; then
     if CORPS_IMAGE_TAG="${DEPLOY_FROM_TAG}" bash "${rb}"; then
       log_error "已回滚到 ${DEPLOY_FROM_TAG}，线上恢复到部署前状态"
-      log_error "⛔ 数据库未回滚。若本次上线含不可逆迁移，schema 仍停留在新版本。"
-      log_error "   请人工评估：是否需要 deploy/scripts/restore.sh 从第 3 步的备份恢复"
+      log_error "⛔ 数据库未回滚。prisma migrate deploy 在容器启动时执行（web/docker/entrypoint.sh），"
+      log_error "   迁移失败或部分成功都会让 schema 与旧代码不匹配。恢复路径（两步）："
+      log_error "   1) 回退镜像：CORPS_IMAGE_TAG=${DEPLOY_FROM_TAG} bash deploy/scripts/rollback.sh（本次已自动执行）"
+      log_error "   2) 恢复数据库：先 bash deploy/scripts/restore.sh --dry-run ${PREDEPLOY_BACKUP:-<备份目录下最新的 corps_predeploy_*.dump>} 验证，"
+      log_error "      再 bash deploy/scripts/restore.sh --force <同一文件>。完整 SOP：docs/runbook-migration-rollback.md"
     else
       log_error "⛔ 自动回滚失败。线上状态未知，需立即人工介入："
       log_error "   1. docker compose ps / docker logs corps-app --tail 50"
       log_error "   2. 手动执行：CORPS_IMAGE_TAG=${DEPLOY_FROM_TAG} bash deploy/scripts/rollback.sh"
-      log_error "   3. 备份位置：${BACKUP_DIR:-/opt/corps/backups}"
+      log_error "   3. 恢复数据库：bash deploy/scripts/restore.sh --dry-run ${PREDEPLOY_BACKUP:-${BACKUP_DIR:-/opt/corps/backups} 下最新 corps_predeploy_*.dump}"
+      log_error "   4. 完整 SOP：docs/runbook-migration-rollback.md"
     fi
   else
     log_error "找不到回滚脚本 ${rb}"
@@ -206,6 +214,7 @@ else
   rm -f "${_err_log}" 2>/dev/null || true
   _bf="$(ls -t "${_bdir}"/corps_predeploy_*.dump 2>/dev/null | head -1)"
   _bf_size="$(du -h "${_bf}" 2>/dev/null | cut -f1 || echo '?')"
+  PREDEPLOY_BACKUP="${_bf}"
   log_ok "备份完成：${_bf}（${_bf_size}）"
 fi
 
