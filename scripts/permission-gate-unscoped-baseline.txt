@@ -5,4 +5,3 @@
 DELETE /api/v1/ai/templates/{id}
 PATCH /api/v1/ai/templates/{id}
 PATCH /api/v1/workspaces/{wid}/notifications
-POST /api/v1/ai/deliverables

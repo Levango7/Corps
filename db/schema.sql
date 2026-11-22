@@ -13679,3 +13679,6093 @@ ALTER TABLE ONLY public.yjs_persistence
 
 \unrestrict XUJ7eyer9l2Xn9fh1uPhlw4pMszS4JE5xEuxrL6phUxtbjP3WN7LmcUZPSU3jDx
 
+--
+-- PostgreSQL database dump
+--
+
+\restrict w1Zh9LFbpTbNUtUFjdaATtXuGt3x11Pnn7VYjDs1s6m4VlDw8u91VdyW75QhUsK
+
+-- Dumped from database version 18.6
+-- Dumped by pg_dump version 18.6
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET transaction_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+
+--
+-- Name: public; Type: SCHEMA; Schema: -; Owner: -
+--
+
+-- *not* creating schema, since initdb creates it
+
+
+--
+-- Name: SCHEMA public; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON SCHEMA public IS '';
+
+
+--
+-- Name: pg_trgm; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
+
+
+--
+-- Name: EXTENSION pg_trgm; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON EXTENSION pg_trgm IS 'text similarity measurement and index searching based on trigrams';
+
+
+SET default_tablespace = '';
+
+SET default_table_access_method = heap;
+
+--
+-- Name: _prisma_migrations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public._prisma_migrations (
+    id character varying(36) NOT NULL,
+    checksum character varying(64) NOT NULL,
+    finished_at timestamp with time zone,
+    migration_name character varying(255) NOT NULL,
+    logs text,
+    rolled_back_at timestamp with time zone,
+    started_at timestamp with time zone DEFAULT now() NOT NULL,
+    applied_steps_count integer DEFAULT 0 NOT NULL
+);
+
+
+--
+-- Name: accounts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.accounts (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    account_id text NOT NULL,
+    provider_id text NOT NULL,
+    user_id uuid NOT NULL,
+    access_token text,
+    refresh_token text,
+    id_token text,
+    access_token_expires_at timestamp with time zone,
+    refresh_token_expires_at timestamp with time zone,
+    scope text,
+    password text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    issuer text DEFAULT 'local:credential'::text
+);
+
+
+--
+-- Name: ai_agent_messages; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.ai_agent_messages (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    workspace_id uuid NOT NULL,
+    from_agent_id uuid NOT NULL,
+    to_agent_id uuid,
+    content text NOT NULL,
+    type character varying(50) NOT NULL,
+    metadata jsonb,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE ONLY public.ai_agent_messages FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: ai_agents; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.ai_agents (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    workspace_id uuid NOT NULL,
+    name character varying(100) NOT NULL,
+    role character varying(50) NOT NULL,
+    capabilities jsonb NOT NULL,
+    system_prompt text NOT NULL,
+    model character varying(50) NOT NULL,
+    enabled boolean DEFAULT true NOT NULL,
+    metadata jsonb,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE ONLY public.ai_agents FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: ai_analysis_reports; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.ai_analysis_reports (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    workspace_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    type character varying(50) NOT NULL,
+    title character varying(200) NOT NULL,
+    summary text NOT NULL,
+    data jsonb,
+    insights jsonb,
+    period jsonb,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE ONLY public.ai_analysis_reports FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: ai_conversations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.ai_conversations (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    title character varying(200) NOT NULL,
+    scopes jsonb NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.ai_conversations FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: ai_feedback; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.ai_feedback (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    capability character varying(50) NOT NULL,
+    rating character varying(10) NOT NULL,
+    comment text,
+    "originalOutput" jsonb,
+    "correctedOutput" jsonb,
+    metadata jsonb,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+ALTER TABLE ONLY public.ai_feedback FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: ai_meeting_action_items; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.ai_meeting_action_items (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    session_id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    content text NOT NULL,
+    assignee_id uuid,
+    due_date timestamp with time zone,
+    status character varying(20) DEFAULT 'pending'::character varying NOT NULL,
+    extracted_by character varying(10) DEFAULT 'ai'::character varying NOT NULL,
+    confidence double precision DEFAULT 0 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE ONLY public.ai_meeting_action_items FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: ai_meeting_decisions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.ai_meeting_decisions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    session_id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    content text NOT NULL,
+    context text,
+    participants jsonb DEFAULT '[]'::jsonb NOT NULL,
+    status character varying(20) DEFAULT 'proposed'::character varying NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE ONLY public.ai_meeting_decisions FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: ai_meeting_sessions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.ai_meeting_sessions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    workspace_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    title character varying(200) NOT NULL,
+    status character varying(20) DEFAULT 'active'::character varying NOT NULL,
+    transcript jsonb DEFAULT '[]'::jsonb NOT NULL,
+    summary text,
+    participant_count integer DEFAULT 0 NOT NULL,
+    start_time timestamp with time zone DEFAULT now() NOT NULL,
+    end_time timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE ONLY public.ai_meeting_sessions FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: ai_messages; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.ai_messages (
+    id uuid NOT NULL,
+    conversation_id uuid NOT NULL,
+    role character varying(20) NOT NULL,
+    content text NOT NULL,
+    metadata jsonb,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: ai_personalizations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.ai_personalizations (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    workspace_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    type character varying(50) NOT NULL,
+    content jsonb NOT NULL,
+    score double precision NOT NULL,
+    applied boolean DEFAULT false NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE ONLY public.ai_personalizations FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: ai_push_records; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.ai_push_records (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    schedule_id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    capability character varying(50) NOT NULL,
+    title character varying(200) NOT NULL,
+    summary text NOT NULL,
+    detail jsonb,
+    read boolean DEFAULT false NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE ONLY public.ai_push_records FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: ai_push_schedules; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.ai_push_schedules (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    workspace_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    capability character varying(50) NOT NULL,
+    cron character varying(50) NOT NULL,
+    enabled boolean DEFAULT true NOT NULL,
+    config jsonb,
+    last_run_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    quiet_hours_start integer,
+    quiet_hours_end integer,
+    frequency text DEFAULT 'daily'::text
+);
+
+ALTER TABLE ONLY public.ai_push_schedules FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: ai_usage_limits; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.ai_usage_limits (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    user_id uuid,
+    daily_token_limit integer,
+    monthly_token_limit integer,
+    daily_call_limit integer,
+    monthly_call_limit integer,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.ai_usage_limits FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: ai_usage_logs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.ai_usage_logs (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    capability character varying(50) NOT NULL,
+    model character varying(50) NOT NULL,
+    input_tokens integer DEFAULT 0 NOT NULL,
+    output_tokens integer DEFAULT 0 NOT NULL,
+    total_tokens integer DEFAULT 0 NOT NULL,
+    cost double precision DEFAULT 0 NOT NULL,
+    duration_ms integer DEFAULT 0 NOT NULL,
+    success boolean DEFAULT true NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+ALTER TABLE ONLY public.ai_usage_logs FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: ai_user_behaviors; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.ai_user_behaviors (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    workspace_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    action character varying(50) NOT NULL,
+    capability character varying(50) NOT NULL,
+    metadata jsonb,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE ONLY public.ai_user_behaviors FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: ai_voice_commands; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.ai_voice_commands (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    workspace_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    transcript text NOT NULL,
+    intent character varying(100),
+    parameters jsonb DEFAULT '{}'::jsonb NOT NULL,
+    executed boolean DEFAULT false NOT NULL,
+    result jsonb,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE ONLY public.ai_voice_commands FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: ai_voice_preferences; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.ai_voice_preferences (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    language character varying(10) DEFAULT 'zh-CN'::character varying NOT NULL,
+    voice_id character varying(50),
+    speed double precision DEFAULT 1.0 NOT NULL,
+    wake_word character varying(50) DEFAULT '你好小助手'::character varying NOT NULL,
+    enabled boolean DEFAULT true NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: ai_workflow_templates; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.ai_workflow_templates (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    name character varying(100) NOT NULL,
+    description text NOT NULL,
+    category character varying(50) NOT NULL,
+    steps jsonb NOT NULL,
+    is_public boolean DEFAULT false NOT NULL,
+    workspace_id uuid,
+    usage_count integer DEFAULT 0 NOT NULL,
+    metadata jsonb,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE ONLY public.ai_workflow_templates FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: analytics_events; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.analytics_events (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid,
+    workspace_id uuid,
+    name character varying(64) NOT NULL,
+    props json DEFAULT '{}'::json NOT NULL,
+    session_id character varying(64),
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE ONLY public.analytics_events FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: announcements; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.announcements (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    title character varying(200) NOT NULL,
+    content text NOT NULL,
+    type character varying(20) DEFAULT 'info'::character varying NOT NULL,
+    target_audience jsonb DEFAULT '{"type": "all"}'::jsonb NOT NULL,
+    pinned boolean DEFAULT false NOT NULL,
+    published_by uuid,
+    published_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    expires_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+ALTER TABLE ONLY public.announcements FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: approval_cc_records; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.approval_cc_records (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    instance_id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    node_index integer NOT NULL,
+    read_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE ONLY public.approval_cc_records FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: approval_delegates; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.approval_delegates (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    workspace_id uuid NOT NULL,
+    delegator_id uuid NOT NULL,
+    delegate_to_id uuid NOT NULL,
+    start_at timestamp with time zone NOT NULL,
+    end_at timestamp with time zone NOT NULL,
+    reason text,
+    active boolean DEFAULT true,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE ONLY public.approval_delegates FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: approval_instances; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.approval_instances (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    template_id uuid,
+    title character varying(200) NOT NULL,
+    description text,
+    applicant_id uuid NOT NULL,
+    content jsonb NOT NULL,
+    status character varying(20) DEFAULT 'pending'::character varying NOT NULL,
+    current_node integer DEFAULT 0 NOT NULL,
+    nodes jsonb NOT NULL,
+    submitted_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    completed_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    active_node_ids text[] DEFAULT '{}'::text[],
+    condition_cache jsonb,
+    priority character varying(20) DEFAULT 'normal'::character varying,
+    expected_at timestamp with time zone,
+    entity_type character varying(20),
+    entity_id uuid
+);
+
+ALTER TABLE ONLY public.approval_instances FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: approval_operations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.approval_operations (
+    id uuid NOT NULL,
+    instance_id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    operator_id uuid NOT NULL,
+    action character varying(20) NOT NULL,
+    node_index integer NOT NULL,
+    comment text,
+    transfer_to_id uuid,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    node_id character varying(100),
+    add_sign_to_id uuid,
+    delegate_to_id uuid
+);
+
+ALTER TABLE ONLY public.approval_operations FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: approval_templates; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.approval_templates (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    name character varying(200) NOT NULL,
+    description character varying(500),
+    nodes jsonb NOT NULL,
+    created_by uuid,
+    active boolean DEFAULT true NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    flow_type character varying(20) DEFAULT 'sequential'::character varying,
+    form_schema jsonb,
+    icon character varying(50) DEFAULT 'file-check'::character varying,
+    category character varying(50),
+    is_builtin boolean DEFAULT false
+);
+
+ALTER TABLE ONLY public.approval_templates FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: assistant_conversations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.assistant_conversations (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    task_id uuid,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE ONLY public.assistant_conversations FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: assistant_messages; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.assistant_messages (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    conversation_id uuid NOT NULL,
+    role character varying(20) NOT NULL,
+    content text NOT NULL,
+    capability_used character varying(50),
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: calendar_connections; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.calendar_connections (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    provider character varying(20) NOT NULL,
+    email character varying(255) NOT NULL,
+    access_token text NOT NULL,
+    refresh_token text NOT NULL,
+    token_expires_at timestamp with time zone NOT NULL,
+    calendar_id character varying(255) NOT NULL,
+    last_sync_at timestamp with time zone,
+    sync_status character varying(20) DEFAULT 'idle'::character varying NOT NULL,
+    sync_error text,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.calendar_connections FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: calendar_events; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.calendar_events (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    workspace_id uuid NOT NULL,
+    title character varying(200) NOT NULL,
+    description text,
+    start_at timestamp with time zone NOT NULL,
+    end_at timestamp with time zone NOT NULL,
+    all_day boolean DEFAULT false NOT NULL,
+    location character varying(500),
+    color character varying(20),
+    created_by uuid NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+ALTER TABLE ONLY public.calendar_events FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: chat_presences; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.chat_presences (
+    id uuid NOT NULL,
+    task_id uuid,
+    user_id uuid NOT NULL,
+    last_seen timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    conversation_id uuid
+);
+
+ALTER TABLE ONLY public.chat_presences FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: comments; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.comments (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    task_id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    author_id uuid,
+    body text NOT NULL,
+    mentions text[] DEFAULT '{}'::text[] NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE ONLY public.comments FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: contact_groups; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.contact_groups (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    name character varying(100) NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+ALTER TABLE ONLY public.contact_groups FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: contacts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.contacts (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    name character varying(100) NOT NULL,
+    email character varying(255),
+    phone character varying(50),
+    department character varying(100),
+    "position" character varying(100),
+    avatar text,
+    notes text,
+    group_id uuid,
+    created_by uuid,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+ALTER TABLE ONLY public.contacts FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: conversation_members; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.conversation_members (
+    id uuid NOT NULL,
+    conversation_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    role character varying(20) DEFAULT 'member'::character varying NOT NULL,
+    joined_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    last_read_at timestamp with time zone,
+    muted boolean DEFAULT false NOT NULL,
+    invited_by uuid
+);
+
+ALTER TABLE ONLY public.conversation_members FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: conversations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.conversations (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    type character varying(20) NOT NULL,
+    title character varying(200),
+    avatar text,
+    description character varying(500),
+    created_by uuid,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone NOT NULL,
+    last_message_at timestamp with time zone,
+    task_id uuid,
+    source character varying(20) DEFAULT 'manual'::character varying
+);
+
+ALTER TABLE ONLY public.conversations FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: database_fields; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.database_fields (
+    id uuid NOT NULL,
+    database_id uuid NOT NULL,
+    name character varying(100) NOT NULL,
+    type character varying(20) NOT NULL,
+    options json DEFAULT '{}'::json NOT NULL,
+    sort_order double precision DEFAULT 0 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: database_records; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.database_records (
+    id uuid NOT NULL,
+    database_id uuid NOT NULL,
+    data json DEFAULT '{}'::json NOT NULL,
+    sort_order double precision DEFAULT 0 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: database_views; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.database_views (
+    id uuid NOT NULL,
+    database_id uuid NOT NULL,
+    name character varying(100) NOT NULL,
+    type character varying(20) NOT NULL,
+    config json DEFAULT '{}'::json NOT NULL,
+    sort_order double precision DEFAULT 0 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: databases; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.databases (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    space_id uuid,
+    folder_id uuid,
+    title character varying(255) NOT NULL,
+    icon character varying(50) DEFAULT 'table'::character varying NOT NULL,
+    emoji character varying(10),
+    description text,
+    sort_order double precision DEFAULT 0 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE ONLY public.databases FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: decision_action_items; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.decision_action_items (
+    id uuid NOT NULL,
+    decision_id uuid NOT NULL,
+    task_id uuid,
+    line_index integer NOT NULL,
+    checked boolean DEFAULT false NOT NULL,
+    assignee_id uuid,
+    due_date timestamp with time zone,
+    priority character varying(20) DEFAULT 'medium'::character varying NOT NULL,
+    title character varying(500) NOT NULL,
+    removed boolean DEFAULT false NOT NULL,
+    user_modified boolean DEFAULT false NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: decision_versions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.decision_versions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    decision_id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    markdown text NOT NULL,
+    version integer NOT NULL,
+    author_id uuid,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT decision_versions_version_check CHECK ((version >= 1))
+);
+
+ALTER TABLE ONLY public.decision_versions FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: decisions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.decisions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    task_id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    markdown text NOT NULL,
+    version integer DEFAULT 1 NOT NULL,
+    author_id uuid,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    reviewed_at timestamp with time zone,
+    CONSTRAINT decisions_version_check CHECK ((version >= 1))
+);
+
+ALTER TABLE ONLY public.decisions FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: deliverables; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.deliverables (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    task_id character varying(64) NOT NULL,
+    title character varying(300) NOT NULL,
+    pipeline character varying(50) NOT NULL,
+    status character varying(20) DEFAULT 'running'::character varying NOT NULL,
+    output_path character varying(500),
+    output_summary text,
+    size_bytes integer,
+    created_by uuid NOT NULL,
+    created_at timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    finished_at timestamp(6) with time zone,
+    updated_at timestamp(6) with time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.deliverables FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: document_comments; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.document_comments (
+    id uuid NOT NULL,
+    document_id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    anchor_path character varying(100) NOT NULL,
+    anchor_text text NOT NULL,
+    body text NOT NULL,
+    mentions text[] DEFAULT '{}'::text[] NOT NULL,
+    parent_id uuid,
+    resolved boolean DEFAULT false NOT NULL,
+    resolved_by uuid,
+    resolved_at timestamp with time zone,
+    author_id uuid,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE ONLY public.document_comments FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: document_permissions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.document_permissions (
+    id uuid NOT NULL,
+    document_id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    grantee_type character varying(20) NOT NULL,
+    grantee_id uuid NOT NULL,
+    permission character varying(20) NOT NULL,
+    granted_by uuid,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    source character varying(20) DEFAULT 'explicit'::character varying,
+    inherited_from_id uuid,
+    expires_at timestamp with time zone
+);
+
+ALTER TABLE ONLY public.document_permissions FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: document_versions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.document_versions (
+    id uuid NOT NULL,
+    document_id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    version integer NOT NULL,
+    snapshot_type character varying(10) NOT NULL,
+    content_full json,
+    content_diff text,
+    markdown text NOT NULL,
+    message character varying(255),
+    source character varying(20) DEFAULT 'manual'::character varying NOT NULL,
+    author_id uuid,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE ONLY public.document_versions FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: documents; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.documents (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    title character varying(255) NOT NULL,
+    markdown text DEFAULT ''::text NOT NULL,
+    published_markdown text,
+    published_at timestamp with time zone,
+    share_token character varying(64),
+    author_id uuid,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    share_expires_at timestamp with time zone,
+    share_password character varying(255),
+    share_slug character varying(100),
+    space_id uuid,
+    folder_id uuid,
+    sort_order double precision DEFAULT 0 NOT NULL,
+    icon character varying(50) DEFAULT 'file-text'::character varying NOT NULL,
+    emoji character varying(10),
+    current_version integer DEFAULT 0 NOT NULL,
+    visibility character varying(20) DEFAULT 'private'::character varying NOT NULL,
+    deleted_at timestamp with time zone,
+    deleted_by uuid
+);
+
+ALTER TABLE ONLY public.documents FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: email_accounts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.email_accounts (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    workspace_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    email character varying(200) NOT NULL,
+    display_name character varying(100),
+    provider character varying(50) DEFAULT 'custom'::character varying NOT NULL,
+    smtp_host character varying(200) NOT NULL,
+    smtp_port integer DEFAULT 587 NOT NULL,
+    smtp_secure boolean DEFAULT false NOT NULL,
+    imap_host character varying(200),
+    imap_port integer DEFAULT 993,
+    credential text NOT NULL,
+    is_default boolean DEFAULT false NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE ONLY public.email_accounts FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: favorites; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.favorites (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    workspace_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    target_type character varying(20) NOT NULL,
+    target_id uuid NOT NULL,
+    note character varying(200),
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE ONLY public.favorites FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: file_assets; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.file_assets (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    file_name character varying(255) NOT NULL,
+    file_size integer NOT NULL,
+    file_type character varying(100) NOT NULL,
+    storage_key text NOT NULL,
+    thumbnail_key text,
+    sha256 character varying(64) NOT NULL,
+    uploaded_by uuid,
+    folder_id uuid,
+    sort_order double precision DEFAULT 0 NOT NULL,
+    current_version integer DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE ONLY public.file_assets FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: file_versions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.file_versions (
+    id uuid NOT NULL,
+    file_asset_id uuid NOT NULL,
+    version integer NOT NULL,
+    storage_key text NOT NULL,
+    file_size integer NOT NULL,
+    message character varying(255),
+    uploaded_by uuid,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: folder_permissions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.folder_permissions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    workspace_id uuid NOT NULL,
+    target_type character varying(10) NOT NULL,
+    target_id uuid NOT NULL,
+    grantee_type character varying(20) NOT NULL,
+    grantee_id character varying(100) NOT NULL,
+    permission character varying(20) NOT NULL,
+    granted_by uuid,
+    inheritable boolean DEFAULT true,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE ONLY public.folder_permissions FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: folders; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.folders (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    space_id uuid NOT NULL,
+    parent_id uuid,
+    name character varying(100) NOT NULL,
+    icon character varying(50) DEFAULT 'folder'::character varying NOT NULL,
+    sort_order double precision DEFAULT 0 NOT NULL,
+    expanded boolean DEFAULT true NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE ONLY public.folders FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: form_submissions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.form_submissions (
+    id uuid NOT NULL,
+    form_id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    data jsonb NOT NULL,
+    submitted_by uuid,
+    submitted_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+ALTER TABLE ONLY public.form_submissions FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: forms; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.forms (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    title character varying(200) NOT NULL,
+    description text,
+    fields jsonb NOT NULL,
+    created_by uuid,
+    active boolean DEFAULT true NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+ALTER TABLE ONLY public.forms FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: gov_doc_attachments; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.gov_doc_attachments (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    gov_doc_id uuid NOT NULL,
+    version integer DEFAULT 1 NOT NULL,
+    file_hash character varying(128) NOT NULL,
+    preview_ref character varying(500),
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+ALTER TABLE ONLY public.gov_doc_attachments FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: gov_doc_exchanges; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.gov_doc_exchanges (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    gov_doc_id uuid NOT NULL,
+    direction character varying(20) DEFAULT 'incoming'::character varying NOT NULL,
+    channel character varying(50) NOT NULL,
+    operator_id uuid,
+    exchanged_at timestamp with time zone NOT NULL,
+    note text,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+ALTER TABLE ONLY public.gov_doc_exchanges FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: gov_doc_opinions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.gov_doc_opinions (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    gov_doc_id uuid NOT NULL,
+    author_id uuid,
+    conclusion character varying(20) NOT NULL,
+    content text NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+ALTER TABLE ONLY public.gov_doc_opinions FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: gov_docs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.gov_docs (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    doc_no character varying(64),
+    title character varying(200) NOT NULL,
+    direction character varying(20) DEFAULT 'incoming'::character varying NOT NULL,
+    secret_level character varying(20) DEFAULT 'internal'::character varying NOT NULL,
+    urgency character varying(20) DEFAULT 'normal'::character varying NOT NULL,
+    source character varying(200),
+    destination character varying(200),
+    status character varying(20) DEFAULT 'draft'::character varying NOT NULL,
+    created_by uuid,
+    remarks text,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.gov_docs FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: invitations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.invitations (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    workspace_id uuid NOT NULL,
+    email character varying(255) NOT NULL,
+    token_hash character varying(64) NOT NULL,
+    role character varying(20) DEFAULT 'member'::character varying NOT NULL,
+    invited_by uuid NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    accepted_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE ONLY public.invitations FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: key_results; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.key_results (
+    id uuid NOT NULL,
+    objective_id uuid NOT NULL,
+    title character varying(200) NOT NULL,
+    target_value double precision NOT NULL,
+    current_value double precision DEFAULT 0 NOT NULL,
+    unit character varying(20),
+    weight double precision DEFAULT 1 NOT NULL,
+    owner_id uuid,
+    due_date timestamp with time zone,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: knowledge_edges; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.knowledge_edges (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    workspace_id uuid NOT NULL,
+    source_node_id uuid NOT NULL,
+    target_node_id uuid NOT NULL,
+    relation character varying(50) NOT NULL,
+    weight double precision DEFAULT 1.0 NOT NULL,
+    metadata jsonb,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE ONLY public.knowledge_edges FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: knowledge_nodes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.knowledge_nodes (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    workspace_id uuid NOT NULL,
+    type character varying(50) NOT NULL,
+    label character varying(200) NOT NULL,
+    content text NOT NULL,
+    source_type character varying(50) NOT NULL,
+    source_id uuid NOT NULL,
+    metadata jsonb,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE ONLY public.knowledge_nodes FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: labels; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.labels (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    name character varying(50) NOT NULL,
+    color character varying(50) DEFAULT 'var(--muted)'::character varying NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.labels FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: mails; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.mails (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    workspace_id uuid NOT NULL,
+    account_id uuid NOT NULL,
+    message_id character varying(500),
+    from_addr character varying(500) NOT NULL,
+    to_addr text NOT NULL,
+    cc_addr text,
+    bcc_addr text,
+    subject character varying(500) NOT NULL,
+    body_text text,
+    body_html text,
+    status character varying(20) DEFAULT 'draft'::character varying NOT NULL,
+    thread_id uuid,
+    in_reply_to character varying(500),
+    attachments jsonb DEFAULT '[]'::jsonb NOT NULL,
+    is_read boolean DEFAULT false NOT NULL,
+    is_starred boolean DEFAULT false NOT NULL,
+    sent_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    uid integer
+);
+
+ALTER TABLE ONLY public.mails FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: meeting_minutes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.meeting_minutes (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    meeting_id uuid,
+    title character varying(200) NOT NULL,
+    content text NOT NULL,
+    attendees jsonb NOT NULL,
+    action_items jsonb DEFAULT '[]'::jsonb NOT NULL,
+    created_by uuid,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+ALTER TABLE ONLY public.meeting_minutes FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: meeting_participants; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.meeting_participants (
+    id uuid NOT NULL,
+    meeting_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    joined_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    left_at timestamp with time zone,
+    role character varying(20) DEFAULT 'guest'::character varying NOT NULL
+);
+
+
+--
+-- Name: meetings; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.meetings (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    title character varying(200) NOT NULL,
+    description character varying(500),
+    created_by uuid,
+    room_name character varying(100) NOT NULL,
+    status character varying(20) DEFAULT 'scheduled'::character varying NOT NULL,
+    type character varying(20) DEFAULT 'instant'::character varying NOT NULL,
+    scheduled_at timestamp with time zone,
+    started_at timestamp with time zone,
+    ended_at timestamp with time zone,
+    max_participants integer DEFAULT 50 NOT NULL,
+    recording_enabled boolean DEFAULT false NOT NULL,
+    recording_url text,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    recurring_rule character varying(255),
+    password character varying(100),
+    recording_started_at timestamp with time zone,
+    recording_stopped_at timestamp with time zone,
+    CONSTRAINT meetings_status_check CHECK (((status)::text = ANY ((ARRAY['scheduled'::character varying, 'active'::character varying, 'ended'::character varying, 'cancelled'::character varying])::text[])))
+);
+
+ALTER TABLE ONLY public.meetings FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: member_permissions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.member_permissions (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    role character varying(20) NOT NULL,
+    module character varying(30) NOT NULL,
+    actions text[] DEFAULT '{}'::text[] NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE ONLY public.member_permissions FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: members; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.members (
+    user_id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    role character varying(20) DEFAULT 'member'::character varying NOT NULL,
+    invited_by uuid,
+    joined_at timestamp with time zone DEFAULT now() NOT NULL,
+    invited_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT members_role_check CHECK (((role)::text = ANY ((ARRAY['owner'::character varying, 'admin'::character varying, 'member'::character varying, 'viewer'::character varying])::text[])))
+);
+
+ALTER TABLE ONLY public.members FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: message_attachments; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.message_attachments (
+    id uuid NOT NULL,
+    message_id uuid NOT NULL,
+    file_name character varying(255) NOT NULL,
+    file_size integer NOT NULL,
+    file_type character varying(100) NOT NULL,
+    url text NOT NULL,
+    thumbnail_url text,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    workspace_id uuid NOT NULL
+);
+
+ALTER TABLE ONLY public.message_attachments FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: message_reads; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.message_reads (
+    id uuid NOT NULL,
+    message_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    read_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+ALTER TABLE ONLY public.message_reads FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: messages; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.messages (
+    id uuid NOT NULL,
+    task_id uuid,
+    workspace_id uuid NOT NULL,
+    author_id uuid,
+    body text NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    conversation_id uuid,
+    edited_at timestamp with time zone,
+    revoked_at timestamp with time zone,
+    revoked_by uuid,
+    reply_to_id uuid,
+    mentions text[] DEFAULT '{}'::text[] NOT NULL,
+    body_tsv tsvector GENERATED ALWAYS AS (to_tsvector('simple'::regconfig, COALESCE(body, ''::text))) STORED,
+    "isRecalled" boolean DEFAULT false NOT NULL,
+    type character varying(20) DEFAULT 'text'::character varying NOT NULL
+);
+
+ALTER TABLE ONLY public.messages FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: milestones; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.milestones (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    name character varying(100) NOT NULL,
+    due_date timestamp with time zone,
+    description text,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.milestones FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: notification_preferences; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.notification_preferences (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    email_notify boolean DEFAULT true NOT NULL,
+    push_notify boolean DEFAULT true NOT NULL,
+    dnd_enabled boolean DEFAULT false NOT NULL,
+    dnd_start character varying(5) DEFAULT '22:00'::character varying NOT NULL,
+    dnd_end character varying(5) DEFAULT '08:00'::character varying NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: notifications; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.notifications (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    workspace_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    type character varying(30) NOT NULL,
+    entity_id uuid NOT NULL,
+    entity_title character varying(255) NOT NULL,
+    read boolean DEFAULT false NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE ONLY public.notifications FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: objectives; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.objectives (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    title character varying(200) NOT NULL,
+    description text,
+    owner_id uuid,
+    period character varying(20) NOT NULL,
+    status character varying(20) DEFAULT 'draft'::character varying NOT NULL,
+    progress double precision DEFAULT 0 NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+ALTER TABLE ONLY public.objectives FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: permission_audit_logs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.permission_audit_logs (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    workspace_id uuid NOT NULL,
+    action character varying(20) NOT NULL,
+    target_type character varying(20) NOT NULL,
+    target_id uuid NOT NULL,
+    grantee_type character varying(20) NOT NULL,
+    grantee_id character varying(100) NOT NULL,
+    old_permission character varying(20),
+    new_permission character varying(20),
+    operator_id uuid NOT NULL,
+    reason text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE ONLY public.permission_audit_logs FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: processed_payment_events; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.processed_payment_events (
+    provider character varying(20) NOT NULL,
+    event_id character varying(255) NOT NULL,
+    received_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: processed_stripe_events; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.processed_stripe_events (
+    id character varying(255) NOT NULL,
+    received_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: project_templates; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.project_templates (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    name character varying(200) NOT NULL,
+    description character varying(500),
+    category character varying(100),
+    template_data jsonb NOT NULL,
+    created_by uuid,
+    is_public boolean DEFAULT false NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+ALTER TABLE ONLY public.project_templates FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: push_subscriptions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.push_subscriptions (
+    endpoint text NOT NULL,
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid,
+    p256dh_key text,
+    auth_key text,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+ALTER TABLE ONLY public.push_subscriptions FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: push_tokens; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.push_tokens (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    platform character varying(20) NOT NULL,
+    token text NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.push_tokens FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: remote_control_sessions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.remote_control_sessions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    workspace_id uuid NOT NULL,
+    initiator_id uuid NOT NULL,
+    target_id uuid NOT NULL,
+    status character varying(20) DEFAULT 'pending'::character varying NOT NULL,
+    end_reason character varying(200),
+    expires_at timestamp with time zone NOT NULL,
+    accepted_at timestamp with time zone,
+    ended_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+ALTER TABLE ONLY public.remote_control_sessions FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: sessions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.sessions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    token text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    ip_address character varying(45),
+    user_agent character varying(500),
+    user_id uuid NOT NULL
+);
+
+
+--
+-- Name: share_access_logs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.share_access_logs (
+    id uuid NOT NULL,
+    entity_type character varying(20) NOT NULL,
+    entity_id uuid NOT NULL,
+    ip character varying(45),
+    user_agent text,
+    accessed_at timestamp with time zone DEFAULT now() NOT NULL,
+    workspace_id uuid
+);
+
+ALTER TABLE ONLY public.share_access_logs FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: share_link_permissions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.share_link_permissions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    document_id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    share_token character varying(64) NOT NULL,
+    permission character varying(20) DEFAULT 'view'::character varying,
+    allow_download boolean DEFAULT false,
+    allow_print boolean DEFAULT false,
+    allow_copy boolean DEFAULT true,
+    password_hash character varying(100),
+    expires_at timestamp with time zone,
+    max_views integer,
+    view_count integer DEFAULT 0,
+    created_by uuid,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE ONLY public.share_link_permissions FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: spaces; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.spaces (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    name character varying(100) NOT NULL,
+    icon character varying(50) DEFAULT 'book'::character varying NOT NULL,
+    sort_order double precision DEFAULT 0 NOT NULL,
+    color character varying(50) DEFAULT 'var(--accent)'::character varying NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE ONLY public.spaces FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: subscriptions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.subscriptions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    workspace_id uuid NOT NULL,
+    stripe_customer_id character varying(255),
+    stripe_sub_id character varying(255),
+    quantity integer DEFAULT 1 NOT NULL,
+    status character varying(20) DEFAULT 'active'::character varying NOT NULL,
+    current_period_end timestamp with time zone,
+    canceled_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    provider character varying(20),
+    provider_order_id character varying(255),
+    CONSTRAINT subscriptions_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'past_due'::character varying, 'canceled'::character varying, 'trialing'::character varying, 'incomplete'::character varying])::text[])))
+);
+
+ALTER TABLE ONLY public.subscriptions FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: task_calendar_events; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.task_calendar_events (
+    id uuid NOT NULL,
+    task_id uuid NOT NULL,
+    connection_id uuid NOT NULL,
+    external_event_id character varying(255) NOT NULL,
+    last_synced_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+ALTER TABLE ONLY public.task_calendar_events FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: task_labels; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.task_labels (
+    task_id uuid NOT NULL,
+    label_id uuid NOT NULL
+);
+
+ALTER TABLE ONLY public.task_labels FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: tasks; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.tasks (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    workspace_id uuid NOT NULL,
+    title character varying(255) NOT NULL,
+    description text,
+    status character varying(20) DEFAULT 'todo'::character varying NOT NULL,
+    priority character varying(20) DEFAULT 'medium'::character varying NOT NULL,
+    assignee_id uuid,
+    due_date timestamp with time zone,
+    sort_order double precision DEFAULT 0 NOT NULL,
+    created_by uuid,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    milestone_id uuid,
+    parent_id uuid,
+    blocked boolean DEFAULT false NOT NULL,
+    blocked_reason character varying(500),
+    task_share_token character varying(64),
+    share_expires_at timestamp with time zone,
+    share_password character varying(255),
+    share_slug character varying(100),
+    deleted_at timestamp with time zone,
+    deleted_by uuid,
+    CONSTRAINT tasks_priority_check CHECK (((priority)::text = ANY ((ARRAY['low'::character varying, 'medium'::character varying, 'high'::character varying, 'urgent'::character varying])::text[]))),
+    CONSTRAINT tasks_status_check CHECK (((status)::text = ANY ((ARRAY['todo'::character varying, 'in_progress'::character varying, 'review'::character varying, 'done'::character varying])::text[])))
+);
+
+ALTER TABLE ONLY public.tasks FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: temporary_grants; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.temporary_grants (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    temp_role character varying(20) NOT NULL,
+    original_role character varying(20) NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    reason text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE ONLY public.temporary_grants FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: time_entries; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.time_entries (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    task_id uuid,
+    start_time timestamp with time zone NOT NULL,
+    end_time timestamp with time zone,
+    duration integer,
+    description text,
+    billable boolean DEFAULT false NOT NULL,
+    hourly_rate double precision,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+ALTER TABLE ONLY public.time_entries FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: user_dashboard_prefs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.user_dashboard_prefs (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    layout jsonb NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE ONLY public.user_dashboard_prefs FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: users; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.users (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    name character varying(100),
+    email character varying(255) NOT NULL,
+    email_verified boolean DEFAULT false NOT NULL,
+    avatar_url text,
+    password_hash text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    last_login_at timestamp with time zone,
+    online_at timestamp with time zone,
+    locale character varying(5) DEFAULT 'zh'::character varying NOT NULL
+);
+
+
+--
+-- Name: verifications; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.verifications (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    identifier text NOT NULL,
+    value text NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: whiteboards; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.whiteboards (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    title character varying(200) NOT NULL,
+    data jsonb DEFAULT '[]'::jsonb NOT NULL,
+    created_by uuid,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+ALTER TABLE ONLY public.whiteboards FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: wiki_pages; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.wiki_pages (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    workspace_id uuid NOT NULL,
+    title character varying(200) NOT NULL,
+    slug character varying(200) NOT NULL,
+    content text NOT NULL,
+    parent_id uuid,
+    created_by uuid NOT NULL,
+    sort_order integer DEFAULT 0 NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    content_tsv tsvector GENERATED ALWAYS AS (to_tsvector('simple'::regconfig, COALESCE(content, ''::text))) STORED
+);
+
+ALTER TABLE ONLY public.wiki_pages FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: workflow_executions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.workflow_executions (
+    id uuid NOT NULL,
+    workflow_id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    trigger_data jsonb NOT NULL,
+    status character varying(20) DEFAULT 'pending'::character varying NOT NULL,
+    result jsonb,
+    started_at timestamp with time zone,
+    completed_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+ALTER TABLE ONLY public.workflow_executions FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: workflows; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.workflows (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    name character varying(200) NOT NULL,
+    description character varying(500),
+    trigger jsonb NOT NULL,
+    actions jsonb NOT NULL,
+    created_by uuid,
+    active boolean DEFAULT true NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+ALTER TABLE ONLY public.workflows FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: workspaces; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.workspaces (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    name character varying(100) NOT NULL,
+    slug character varying(50) NOT NULL,
+    owner_id uuid NOT NULL,
+    plan character varying(20) DEFAULT 'free'::character varying NOT NULL,
+    seat_limit integer DEFAULT 10 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    settings jsonb DEFAULT '{}'::jsonb NOT NULL,
+    CONSTRAINT workspaces_plan_check CHECK (((plan)::text = ANY ((ARRAY['free'::character varying, 'starter'::character varying, 'pro'::character varying, 'enterprise'::character varying])::text[]))),
+    CONSTRAINT workspaces_seat_limit_check CHECK (((seat_limit >= 1) AND (seat_limit <= 1000)))
+);
+
+ALTER TABLE ONLY public.workspaces FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: yjs_persistence; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.yjs_persistence (
+    id uuid NOT NULL,
+    document_id uuid NOT NULL,
+    state bytea NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: _prisma_migrations _prisma_migrations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public._prisma_migrations
+    ADD CONSTRAINT _prisma_migrations_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: accounts accounts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.accounts
+    ADD CONSTRAINT accounts_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: ai_agent_messages ai_agent_messages_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_agent_messages
+    ADD CONSTRAINT ai_agent_messages_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: ai_agents ai_agents_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_agents
+    ADD CONSTRAINT ai_agents_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: ai_analysis_reports ai_analysis_reports_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_analysis_reports
+    ADD CONSTRAINT ai_analysis_reports_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: ai_conversations ai_conversations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_conversations
+    ADD CONSTRAINT ai_conversations_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: ai_feedback ai_feedback_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_feedback
+    ADD CONSTRAINT ai_feedback_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: ai_meeting_action_items ai_meeting_action_items_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_meeting_action_items
+    ADD CONSTRAINT ai_meeting_action_items_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: ai_meeting_decisions ai_meeting_decisions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_meeting_decisions
+    ADD CONSTRAINT ai_meeting_decisions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: ai_meeting_sessions ai_meeting_sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_meeting_sessions
+    ADD CONSTRAINT ai_meeting_sessions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: ai_messages ai_messages_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_messages
+    ADD CONSTRAINT ai_messages_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: ai_personalizations ai_personalizations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_personalizations
+    ADD CONSTRAINT ai_personalizations_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: ai_push_records ai_push_records_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_push_records
+    ADD CONSTRAINT ai_push_records_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: ai_push_schedules ai_push_schedules_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_push_schedules
+    ADD CONSTRAINT ai_push_schedules_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: ai_usage_limits ai_usage_limits_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_usage_limits
+    ADD CONSTRAINT ai_usage_limits_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: ai_usage_logs ai_usage_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_usage_logs
+    ADD CONSTRAINT ai_usage_logs_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: ai_user_behaviors ai_user_behaviors_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_user_behaviors
+    ADD CONSTRAINT ai_user_behaviors_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: ai_voice_commands ai_voice_commands_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_voice_commands
+    ADD CONSTRAINT ai_voice_commands_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: ai_voice_preferences ai_voice_preferences_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_voice_preferences
+    ADD CONSTRAINT ai_voice_preferences_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: ai_workflow_templates ai_workflow_templates_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_workflow_templates
+    ADD CONSTRAINT ai_workflow_templates_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: analytics_events analytics_events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_events
+    ADD CONSTRAINT analytics_events_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: announcements announcements_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.announcements
+    ADD CONSTRAINT announcements_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: approval_cc_records approval_cc_records_instance_id_user_id_node_index_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.approval_cc_records
+    ADD CONSTRAINT approval_cc_records_instance_id_user_id_node_index_key UNIQUE (instance_id, user_id, node_index);
+
+
+--
+-- Name: approval_cc_records approval_cc_records_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.approval_cc_records
+    ADD CONSTRAINT approval_cc_records_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: approval_delegates approval_delegates_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.approval_delegates
+    ADD CONSTRAINT approval_delegates_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: approval_delegates approval_delegates_workspace_id_delegator_id_start_at_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.approval_delegates
+    ADD CONSTRAINT approval_delegates_workspace_id_delegator_id_start_at_key UNIQUE (workspace_id, delegator_id, start_at);
+
+
+--
+-- Name: approval_instances approval_instances_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.approval_instances
+    ADD CONSTRAINT approval_instances_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: approval_operations approval_operations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.approval_operations
+    ADD CONSTRAINT approval_operations_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: approval_templates approval_templates_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.approval_templates
+    ADD CONSTRAINT approval_templates_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: assistant_conversations assistant_conversations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.assistant_conversations
+    ADD CONSTRAINT assistant_conversations_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: assistant_messages assistant_messages_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.assistant_messages
+    ADD CONSTRAINT assistant_messages_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: calendar_connections calendar_connections_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.calendar_connections
+    ADD CONSTRAINT calendar_connections_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: calendar_events calendar_events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.calendar_events
+    ADD CONSTRAINT calendar_events_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: chat_presences chat_presences_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.chat_presences
+    ADD CONSTRAINT chat_presences_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: comments comments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.comments
+    ADD CONSTRAINT comments_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: contact_groups contact_groups_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.contact_groups
+    ADD CONSTRAINT contact_groups_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: contacts contacts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.contacts
+    ADD CONSTRAINT contacts_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: conversation_members conversation_members_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.conversation_members
+    ADD CONSTRAINT conversation_members_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: conversations conversations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.conversations
+    ADD CONSTRAINT conversations_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: database_fields database_fields_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.database_fields
+    ADD CONSTRAINT database_fields_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: database_records database_records_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.database_records
+    ADD CONSTRAINT database_records_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: database_views database_views_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.database_views
+    ADD CONSTRAINT database_views_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: databases databases_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.databases
+    ADD CONSTRAINT databases_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: decision_action_items decision_action_items_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.decision_action_items
+    ADD CONSTRAINT decision_action_items_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: decision_versions decision_versions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.decision_versions
+    ADD CONSTRAINT decision_versions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: decisions decisions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.decisions
+    ADD CONSTRAINT decisions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: deliverables deliverables_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deliverables
+    ADD CONSTRAINT deliverables_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: document_comments document_comments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.document_comments
+    ADD CONSTRAINT document_comments_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: document_permissions document_permissions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.document_permissions
+    ADD CONSTRAINT document_permissions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: document_versions document_versions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.document_versions
+    ADD CONSTRAINT document_versions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: documents documents_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.documents
+    ADD CONSTRAINT documents_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: documents documents_share_token_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.documents
+    ADD CONSTRAINT documents_share_token_key UNIQUE (share_token);
+
+
+--
+-- Name: email_accounts email_accounts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.email_accounts
+    ADD CONSTRAINT email_accounts_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: favorites favorites_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.favorites
+    ADD CONSTRAINT favorites_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: file_assets file_assets_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.file_assets
+    ADD CONSTRAINT file_assets_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: file_versions file_versions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.file_versions
+    ADD CONSTRAINT file_versions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: folder_permissions folder_permissions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.folder_permissions
+    ADD CONSTRAINT folder_permissions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: folder_permissions folder_permissions_target_type_target_id_grantee_type_grant_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.folder_permissions
+    ADD CONSTRAINT folder_permissions_target_type_target_id_grantee_type_grant_key UNIQUE (target_type, target_id, grantee_type, grantee_id);
+
+
+--
+-- Name: folders folders_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.folders
+    ADD CONSTRAINT folders_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: form_submissions form_submissions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.form_submissions
+    ADD CONSTRAINT form_submissions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: forms forms_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.forms
+    ADD CONSTRAINT forms_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: gov_doc_attachments gov_doc_attachments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.gov_doc_attachments
+    ADD CONSTRAINT gov_doc_attachments_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: gov_doc_exchanges gov_doc_exchanges_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.gov_doc_exchanges
+    ADD CONSTRAINT gov_doc_exchanges_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: gov_doc_opinions gov_doc_opinions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.gov_doc_opinions
+    ADD CONSTRAINT gov_doc_opinions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: gov_docs gov_docs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.gov_docs
+    ADD CONSTRAINT gov_docs_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: invitations invitations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.invitations
+    ADD CONSTRAINT invitations_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: key_results key_results_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.key_results
+    ADD CONSTRAINT key_results_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: knowledge_edges knowledge_edges_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.knowledge_edges
+    ADD CONSTRAINT knowledge_edges_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: knowledge_nodes knowledge_nodes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.knowledge_nodes
+    ADD CONSTRAINT knowledge_nodes_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: labels labels_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.labels
+    ADD CONSTRAINT labels_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: mails mails_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.mails
+    ADD CONSTRAINT mails_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: meeting_minutes meeting_minutes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.meeting_minutes
+    ADD CONSTRAINT meeting_minutes_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: meeting_participants meeting_participants_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.meeting_participants
+    ADD CONSTRAINT meeting_participants_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: meetings meetings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.meetings
+    ADD CONSTRAINT meetings_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: member_permissions member_permissions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.member_permissions
+    ADD CONSTRAINT member_permissions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: members members_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.members
+    ADD CONSTRAINT members_pkey PRIMARY KEY (user_id, workspace_id);
+
+
+--
+-- Name: message_attachments message_attachments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.message_attachments
+    ADD CONSTRAINT message_attachments_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: message_reads message_reads_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.message_reads
+    ADD CONSTRAINT message_reads_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: messages messages_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.messages
+    ADD CONSTRAINT messages_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: milestones milestones_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.milestones
+    ADD CONSTRAINT milestones_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: notification_preferences notification_preferences_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.notification_preferences
+    ADD CONSTRAINT notification_preferences_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: notifications notifications_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.notifications
+    ADD CONSTRAINT notifications_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: objectives objectives_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.objectives
+    ADD CONSTRAINT objectives_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: permission_audit_logs permission_audit_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.permission_audit_logs
+    ADD CONSTRAINT permission_audit_logs_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: processed_payment_events processed_payment_events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.processed_payment_events
+    ADD CONSTRAINT processed_payment_events_pkey PRIMARY KEY (provider, event_id);
+
+
+--
+-- Name: processed_stripe_events processed_stripe_events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.processed_stripe_events
+    ADD CONSTRAINT processed_stripe_events_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: project_templates project_templates_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_templates
+    ADD CONSTRAINT project_templates_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: push_subscriptions push_subscriptions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.push_subscriptions
+    ADD CONSTRAINT push_subscriptions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: push_tokens push_tokens_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.push_tokens
+    ADD CONSTRAINT push_tokens_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: remote_control_sessions remote_control_sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.remote_control_sessions
+    ADD CONSTRAINT remote_control_sessions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: sessions sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sessions
+    ADD CONSTRAINT sessions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: share_access_logs share_access_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.share_access_logs
+    ADD CONSTRAINT share_access_logs_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: share_link_permissions share_link_permissions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.share_link_permissions
+    ADD CONSTRAINT share_link_permissions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: share_link_permissions share_link_permissions_share_token_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.share_link_permissions
+    ADD CONSTRAINT share_link_permissions_share_token_key UNIQUE (share_token);
+
+
+--
+-- Name: spaces spaces_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.spaces
+    ADD CONSTRAINT spaces_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: subscriptions subscriptions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscriptions
+    ADD CONSTRAINT subscriptions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: task_calendar_events task_calendar_events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.task_calendar_events
+    ADD CONSTRAINT task_calendar_events_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: task_labels task_labels_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.task_labels
+    ADD CONSTRAINT task_labels_pkey PRIMARY KEY (task_id, label_id);
+
+
+--
+-- Name: tasks tasks_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tasks
+    ADD CONSTRAINT tasks_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: tasks tasks_task_share_token_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tasks
+    ADD CONSTRAINT tasks_task_share_token_key UNIQUE (task_share_token);
+
+
+--
+-- Name: temporary_grants temporary_grants_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.temporary_grants
+    ADD CONSTRAINT temporary_grants_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: time_entries time_entries_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.time_entries
+    ADD CONSTRAINT time_entries_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: user_dashboard_prefs user_dashboard_prefs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_dashboard_prefs
+    ADD CONSTRAINT user_dashboard_prefs_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: verifications verifications_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.verifications
+    ADD CONSTRAINT verifications_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: whiteboards whiteboards_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.whiteboards
+    ADD CONSTRAINT whiteboards_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: wiki_pages wiki_pages_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wiki_pages
+    ADD CONSTRAINT wiki_pages_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: workflow_executions workflow_executions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.workflow_executions
+    ADD CONSTRAINT workflow_executions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: workflows workflows_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.workflows
+    ADD CONSTRAINT workflows_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: workspaces workspaces_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.workspaces
+    ADD CONSTRAINT workspaces_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: yjs_persistence yjs_persistence_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.yjs_persistence
+    ADD CONSTRAINT yjs_persistence_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: FileAsset_workspaceId_sha256_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX "FileAsset_workspaceId_sha256_key" ON public.file_assets USING btree (workspace_id, sha256);
+
+
+--
+-- Name: accounts_user_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX accounts_user_id_idx ON public.accounts USING btree (user_id);
+
+
+--
+-- Name: ai_agent_messages_from_agent_id_created_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ai_agent_messages_from_agent_id_created_at_idx ON public.ai_agent_messages USING btree (from_agent_id, created_at);
+
+
+--
+-- Name: ai_agent_messages_to_agent_id_created_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ai_agent_messages_to_agent_id_created_at_idx ON public.ai_agent_messages USING btree (to_agent_id, created_at);
+
+
+--
+-- Name: ai_agent_messages_workspace_id_created_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ai_agent_messages_workspace_id_created_at_idx ON public.ai_agent_messages USING btree (workspace_id, created_at);
+
+
+--
+-- Name: ai_agents_workspace_id_enabled_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ai_agents_workspace_id_enabled_idx ON public.ai_agents USING btree (workspace_id, enabled);
+
+
+--
+-- Name: ai_analysis_reports_user_id_created_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ai_analysis_reports_user_id_created_at_idx ON public.ai_analysis_reports USING btree (user_id, created_at);
+
+
+--
+-- Name: ai_analysis_reports_workspace_id_type_created_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ai_analysis_reports_workspace_id_type_created_at_idx ON public.ai_analysis_reports USING btree (workspace_id, type, created_at);
+
+
+--
+-- Name: ai_conversations_workspace_id_user_id_updated_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ai_conversations_workspace_id_user_id_updated_at_idx ON public.ai_conversations USING btree (workspace_id, user_id, updated_at);
+
+
+--
+-- Name: ai_feedback_user_id_created_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ai_feedback_user_id_created_at_idx ON public.ai_feedback USING btree (user_id, created_at);
+
+
+--
+-- Name: ai_feedback_workspace_id_capability_created_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ai_feedback_workspace_id_capability_created_at_idx ON public.ai_feedback USING btree (workspace_id, capability, created_at);
+
+
+--
+-- Name: ai_meeting_action_items_session_id_status_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ai_meeting_action_items_session_id_status_idx ON public.ai_meeting_action_items USING btree (session_id, status);
+
+
+--
+-- Name: ai_meeting_decisions_session_id_status_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ai_meeting_decisions_session_id_status_idx ON public.ai_meeting_decisions USING btree (session_id, status);
+
+
+--
+-- Name: ai_meeting_sessions_workspace_id_status_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ai_meeting_sessions_workspace_id_status_idx ON public.ai_meeting_sessions USING btree (workspace_id, status);
+
+
+--
+-- Name: ai_messages_conversation_id_created_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ai_messages_conversation_id_created_at_idx ON public.ai_messages USING btree (conversation_id, created_at);
+
+
+--
+-- Name: ai_personalizations_user_id_type_created_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ai_personalizations_user_id_type_created_at_idx ON public.ai_personalizations USING btree (user_id, type, created_at);
+
+
+--
+-- Name: ai_push_records_user_id_read_created_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ai_push_records_user_id_read_created_at_idx ON public.ai_push_records USING btree (user_id, read, created_at);
+
+
+--
+-- Name: ai_push_records_workspace_id_created_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ai_push_records_workspace_id_created_at_idx ON public.ai_push_records USING btree (workspace_id, created_at);
+
+
+--
+-- Name: ai_push_schedules_user_id_enabled_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ai_push_schedules_user_id_enabled_idx ON public.ai_push_schedules USING btree (user_id, enabled);
+
+
+--
+-- Name: ai_push_schedules_workspace_id_enabled_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ai_push_schedules_workspace_id_enabled_idx ON public.ai_push_schedules USING btree (workspace_id, enabled);
+
+
+--
+-- Name: ai_usage_limits_workspace_id_user_id_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX ai_usage_limits_workspace_id_user_id_key ON public.ai_usage_limits USING btree (workspace_id, user_id);
+
+
+--
+-- Name: ai_usage_logs_user_id_created_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ai_usage_logs_user_id_created_at_idx ON public.ai_usage_logs USING btree (user_id, created_at);
+
+
+--
+-- Name: ai_usage_logs_workspace_id_capability_created_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ai_usage_logs_workspace_id_capability_created_at_idx ON public.ai_usage_logs USING btree (workspace_id, capability, created_at);
+
+
+--
+-- Name: ai_usage_logs_workspace_id_created_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ai_usage_logs_workspace_id_created_at_idx ON public.ai_usage_logs USING btree (workspace_id, created_at);
+
+
+--
+-- Name: ai_user_behaviors_user_id_action_created_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ai_user_behaviors_user_id_action_created_at_idx ON public.ai_user_behaviors USING btree (user_id, action, created_at);
+
+
+--
+-- Name: ai_user_behaviors_workspace_id_capability_created_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ai_user_behaviors_workspace_id_capability_created_at_idx ON public.ai_user_behaviors USING btree (workspace_id, capability, created_at);
+
+
+--
+-- Name: ai_voice_commands_user_id_created_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ai_voice_commands_user_id_created_at_idx ON public.ai_voice_commands USING btree (user_id, created_at);
+
+
+--
+-- Name: ai_voice_preferences_user_id_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX ai_voice_preferences_user_id_key ON public.ai_voice_preferences USING btree (user_id);
+
+
+--
+-- Name: ai_workflow_templates_category_is_public_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ai_workflow_templates_category_is_public_idx ON public.ai_workflow_templates USING btree (category, is_public);
+
+
+--
+-- Name: ai_workflow_templates_workspace_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ai_workflow_templates_workspace_id_idx ON public.ai_workflow_templates USING btree (workspace_id);
+
+
+--
+-- Name: analytics_events_name_created_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX analytics_events_name_created_at_idx ON public.analytics_events USING btree (name, created_at);
+
+
+--
+-- Name: analytics_events_session_id_created_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX analytics_events_session_id_created_at_idx ON public.analytics_events USING btree (session_id, created_at);
+
+
+--
+-- Name: analytics_events_user_id_created_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX analytics_events_user_id_created_at_idx ON public.analytics_events USING btree (user_id, created_at);
+
+
+--
+-- Name: analytics_events_workspace_id_created_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX analytics_events_workspace_id_created_at_idx ON public.analytics_events USING btree (workspace_id, created_at);
+
+
+--
+-- Name: announcements_workspace_id_published_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX announcements_workspace_id_published_at_idx ON public.announcements USING btree (workspace_id, published_at);
+
+
+--
+-- Name: approval_cc_records_user_id_read_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX approval_cc_records_user_id_read_at_idx ON public.approval_cc_records USING btree (user_id, read_at);
+
+
+--
+-- Name: approval_delegates_delegate_to_id_active_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX approval_delegates_delegate_to_id_active_idx ON public.approval_delegates USING btree (delegate_to_id, active);
+
+
+--
+-- Name: approval_instances_applicant_id_status_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX approval_instances_applicant_id_status_idx ON public.approval_instances USING btree (applicant_id, status);
+
+
+--
+-- Name: approval_instances_workspace_id_priority_status_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX approval_instances_workspace_id_priority_status_idx ON public.approval_instances USING btree (workspace_id, priority, status);
+
+
+--
+-- Name: approval_instances_workspace_id_status_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX approval_instances_workspace_id_status_idx ON public.approval_instances USING btree (workspace_id, status);
+
+
+--
+-- Name: approval_operations_instance_id_created_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX approval_operations_instance_id_created_at_idx ON public.approval_operations USING btree (instance_id, created_at);
+
+
+--
+-- Name: approval_operations_instance_id_node_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX approval_operations_instance_id_node_id_idx ON public.approval_operations USING btree (instance_id, node_id);
+
+
+--
+-- Name: approval_templates_workspace_id_active_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX approval_templates_workspace_id_active_idx ON public.approval_templates USING btree (workspace_id, active);
+
+
+--
+-- Name: approval_templates_workspace_id_category_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX approval_templates_workspace_id_category_idx ON public.approval_templates USING btree (workspace_id, category);
+
+
+--
+-- Name: assistant_conversations_user_id_workspace_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX assistant_conversations_user_id_workspace_id_idx ON public.assistant_conversations USING btree (user_id, workspace_id);
+
+
+--
+-- Name: assistant_messages_conversation_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX assistant_messages_conversation_id_idx ON public.assistant_messages USING btree (conversation_id);
+
+
+--
+-- Name: calendar_connections_user_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX calendar_connections_user_id_idx ON public.calendar_connections USING btree (user_id);
+
+
+--
+-- Name: calendar_connections_user_id_provider_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX calendar_connections_user_id_provider_key ON public.calendar_connections USING btree (user_id, provider);
+
+
+--
+-- Name: calendar_events_workspace_id_end_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX calendar_events_workspace_id_end_at_idx ON public.calendar_events USING btree (workspace_id, end_at);
+
+
+--
+-- Name: calendar_events_workspace_id_start_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX calendar_events_workspace_id_start_at_idx ON public.calendar_events USING btree (workspace_id, start_at);
+
+
+--
+-- Name: chat_presences_conversation_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX chat_presences_conversation_id_idx ON public.chat_presences USING btree (conversation_id);
+
+
+--
+-- Name: chat_presences_task_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX chat_presences_task_id_idx ON public.chat_presences USING btree (task_id);
+
+
+--
+-- Name: comments_task_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX comments_task_id_idx ON public.comments USING btree (task_id);
+
+
+--
+-- Name: comments_workspace_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX comments_workspace_id_idx ON public.comments USING btree (workspace_id);
+
+
+--
+-- Name: contact_groups_workspace_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX contact_groups_workspace_id_idx ON public.contact_groups USING btree (workspace_id);
+
+
+--
+-- Name: contacts_workspace_id_group_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX contacts_workspace_id_group_id_idx ON public.contacts USING btree (workspace_id, group_id);
+
+
+--
+-- Name: contacts_workspace_id_name_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX contacts_workspace_id_name_idx ON public.contacts USING btree (workspace_id, name);
+
+
+--
+-- Name: conversation_members_conversation_id_user_id_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX conversation_members_conversation_id_user_id_key ON public.conversation_members USING btree (conversation_id, user_id);
+
+
+--
+-- Name: conversation_members_user_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX conversation_members_user_id_idx ON public.conversation_members USING btree (user_id);
+
+
+--
+-- Name: conversations_workspace_id_updated_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX conversations_workspace_id_updated_at_idx ON public.conversations USING btree (workspace_id, updated_at);
+
+
+--
+-- Name: database_fields_database_id_sort_order_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX database_fields_database_id_sort_order_idx ON public.database_fields USING btree (database_id, sort_order);
+
+
+--
+-- Name: database_records_database_id_sort_order_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX database_records_database_id_sort_order_idx ON public.database_records USING btree (database_id, sort_order);
+
+
+--
+-- Name: database_views_database_id_sort_order_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX database_views_database_id_sort_order_idx ON public.database_views USING btree (database_id, sort_order);
+
+
+--
+-- Name: databases_space_id_folder_id_sort_order_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX databases_space_id_folder_id_sort_order_idx ON public.databases USING btree (space_id, folder_id, sort_order);
+
+
+--
+-- Name: databases_workspace_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX databases_workspace_id_idx ON public.databases USING btree (workspace_id);
+
+
+--
+-- Name: decision_action_items_decision_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX decision_action_items_decision_id_idx ON public.decision_action_items USING btree (decision_id);
+
+
+--
+-- Name: decision_action_items_task_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX decision_action_items_task_id_idx ON public.decision_action_items USING btree (task_id);
+
+
+--
+-- Name: decision_versions_decision_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX decision_versions_decision_id_idx ON public.decision_versions USING btree (decision_id);
+
+
+--
+-- Name: decision_versions_workspace_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX decision_versions_workspace_id_idx ON public.decision_versions USING btree (workspace_id);
+
+
+--
+-- Name: decisions_task_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX decisions_task_id_idx ON public.decisions USING btree (task_id);
+
+
+--
+-- Name: decisions_workspace_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX decisions_workspace_id_idx ON public.decisions USING btree (workspace_id);
+
+
+--
+-- Name: deliverables_workspace_id_status_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX deliverables_workspace_id_status_idx ON public.deliverables USING btree (workspace_id, status);
+
+
+--
+-- Name: deliverables_workspace_id_task_id_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX deliverables_workspace_id_task_id_key ON public.deliverables USING btree (workspace_id, task_id);
+
+
+--
+-- Name: document_comments_document_id_anchor_path_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX document_comments_document_id_anchor_path_idx ON public.document_comments USING btree (document_id, anchor_path);
+
+
+--
+-- Name: document_comments_document_id_resolved_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX document_comments_document_id_resolved_idx ON public.document_comments USING btree (document_id, resolved);
+
+
+--
+-- Name: document_comments_workspace_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX document_comments_workspace_id_idx ON public.document_comments USING btree (workspace_id);
+
+
+--
+-- Name: document_permissions_document_id_grantee_type_grantee_id_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX document_permissions_document_id_grantee_type_grantee_id_key ON public.document_permissions USING btree (document_id, grantee_type, grantee_id);
+
+
+--
+-- Name: document_permissions_document_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX document_permissions_document_id_idx ON public.document_permissions USING btree (document_id);
+
+
+--
+-- Name: document_permissions_workspace_id_grantee_type_grantee_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX document_permissions_workspace_id_grantee_type_grantee_id_idx ON public.document_permissions USING btree (workspace_id, grantee_type, grantee_id);
+
+
+--
+-- Name: document_versions_document_id_created_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX document_versions_document_id_created_at_idx ON public.document_versions USING btree (document_id, created_at);
+
+
+--
+-- Name: document_versions_workspace_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX document_versions_workspace_id_idx ON public.document_versions USING btree (workspace_id);
+
+
+--
+-- Name: documents_share_slug_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX documents_share_slug_idx ON public.documents USING btree (share_slug) WHERE (share_slug IS NOT NULL);
+
+
+--
+-- Name: documents_space_id_folder_id_sort_order_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX documents_space_id_folder_id_sort_order_idx ON public.documents USING btree (space_id, folder_id, sort_order);
+
+
+--
+-- Name: documents_workspace_id_deleted_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX documents_workspace_id_deleted_at_idx ON public.documents USING btree (workspace_id, deleted_at);
+
+
+--
+-- Name: documents_workspace_id_title_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX documents_workspace_id_title_idx ON public.documents USING btree (workspace_id, title);
+
+
+--
+-- Name: documents_workspace_id_updated_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX documents_workspace_id_updated_at_idx ON public.documents USING btree (workspace_id, updated_at);
+
+
+--
+-- Name: email_accounts_user_id_email_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX email_accounts_user_id_email_key ON public.email_accounts USING btree (user_id, email);
+
+
+--
+-- Name: email_accounts_workspace_id_user_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX email_accounts_workspace_id_user_id_idx ON public.email_accounts USING btree (workspace_id, user_id);
+
+
+--
+-- Name: favorites_user_id_target_type_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX favorites_user_id_target_type_idx ON public.favorites USING btree (user_id, target_type);
+
+
+--
+-- Name: favorites_user_id_target_type_target_id_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX favorites_user_id_target_type_target_id_key ON public.favorites USING btree (user_id, target_type, target_id);
+
+
+--
+-- Name: favorites_workspace_id_user_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX favorites_workspace_id_user_id_idx ON public.favorites USING btree (workspace_id, user_id);
+
+
+--
+-- Name: file_assets_sha256_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX file_assets_sha256_idx ON public.file_assets USING btree (sha256);
+
+
+--
+-- Name: file_assets_workspace_id_folder_id_sort_order_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX file_assets_workspace_id_folder_id_sort_order_idx ON public.file_assets USING btree (workspace_id, folder_id, sort_order);
+
+
+--
+-- Name: file_versions_file_asset_id_created_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX file_versions_file_asset_id_created_at_idx ON public.file_versions USING btree (file_asset_id, created_at);
+
+
+--
+-- Name: file_versions_file_asset_id_version_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX file_versions_file_asset_id_version_key ON public.file_versions USING btree (file_asset_id, version);
+
+
+--
+-- Name: folder_permissions_target_type_target_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX folder_permissions_target_type_target_id_idx ON public.folder_permissions USING btree (target_type, target_id);
+
+
+--
+-- Name: folder_permissions_workspace_id_grantee_type_grantee_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX folder_permissions_workspace_id_grantee_type_grantee_id_idx ON public.folder_permissions USING btree (workspace_id, grantee_type, grantee_id);
+
+
+--
+-- Name: folders_space_id_parent_id_sort_order_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX folders_space_id_parent_id_sort_order_idx ON public.folders USING btree (space_id, parent_id, sort_order);
+
+
+--
+-- Name: folders_workspace_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX folders_workspace_id_idx ON public.folders USING btree (workspace_id);
+
+
+--
+-- Name: form_submissions_form_id_submitted_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX form_submissions_form_id_submitted_at_idx ON public.form_submissions USING btree (form_id, submitted_at);
+
+
+--
+-- Name: forms_workspace_id_active_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX forms_workspace_id_active_idx ON public.forms USING btree (workspace_id, active);
+
+
+--
+-- Name: gov_doc_attachments_workspace_id_gov_doc_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX gov_doc_attachments_workspace_id_gov_doc_id_idx ON public.gov_doc_attachments USING btree (workspace_id, gov_doc_id);
+
+
+--
+-- Name: gov_doc_exchanges_workspace_id_gov_doc_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX gov_doc_exchanges_workspace_id_gov_doc_id_idx ON public.gov_doc_exchanges USING btree (workspace_id, gov_doc_id);
+
+
+--
+-- Name: gov_doc_opinions_workspace_id_gov_doc_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX gov_doc_opinions_workspace_id_gov_doc_id_idx ON public.gov_doc_opinions USING btree (workspace_id, gov_doc_id);
+
+
+--
+-- Name: gov_docs_workspace_id_direction_status_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX gov_docs_workspace_id_direction_status_idx ON public.gov_docs USING btree (workspace_id, direction, status);
+
+
+--
+-- Name: gov_docs_workspace_id_updated_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX gov_docs_workspace_id_updated_at_idx ON public.gov_docs USING btree (workspace_id, updated_at);
+
+
+--
+-- Name: idx_decisions_markdown_trgm; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_decisions_markdown_trgm ON public.decisions USING gin (markdown public.gin_trgm_ops);
+
+
+--
+-- Name: idx_documents_markdown_trgm; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_documents_markdown_trgm ON public.documents USING gin (markdown public.gin_trgm_ops);
+
+
+--
+-- Name: idx_documents_published_markdown_trgm; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_documents_published_markdown_trgm ON public.documents USING gin (published_markdown public.gin_trgm_ops);
+
+
+--
+-- Name: idx_messages_body_trgm; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_messages_body_trgm ON public.messages USING gin (body public.gin_trgm_ops);
+
+
+--
+-- Name: idx_tasks_description_trgm; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_tasks_description_trgm ON public.tasks USING gin (description public.gin_trgm_ops);
+
+
+--
+-- Name: idx_tasks_title_trgm; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_tasks_title_trgm ON public.tasks USING gin (title public.gin_trgm_ops);
+
+
+--
+-- Name: idx_users_online_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_users_online_at ON public.users USING btree (online_at DESC) WHERE (online_at IS NOT NULL);
+
+
+--
+-- Name: invitations_email_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX invitations_email_idx ON public.invitations USING btree (email);
+
+
+--
+-- Name: invitations_token_hash_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX invitations_token_hash_key ON public.invitations USING btree (token_hash);
+
+
+--
+-- Name: key_results_objective_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX key_results_objective_id_idx ON public.key_results USING btree (objective_id);
+
+
+--
+-- Name: knowledge_edges_source_node_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX knowledge_edges_source_node_id_idx ON public.knowledge_edges USING btree (source_node_id);
+
+
+--
+-- Name: knowledge_edges_target_node_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX knowledge_edges_target_node_id_idx ON public.knowledge_edges USING btree (target_node_id);
+
+
+--
+-- Name: knowledge_edges_workspace_id_relation_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX knowledge_edges_workspace_id_relation_idx ON public.knowledge_edges USING btree (workspace_id, relation);
+
+
+--
+-- Name: knowledge_nodes_workspace_id_source_type_source_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX knowledge_nodes_workspace_id_source_type_source_id_idx ON public.knowledge_nodes USING btree (workspace_id, source_type, source_id);
+
+
+--
+-- Name: knowledge_nodes_workspace_id_type_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX knowledge_nodes_workspace_id_type_idx ON public.knowledge_nodes USING btree (workspace_id, type);
+
+
+--
+-- Name: labels_workspace_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX labels_workspace_id_idx ON public.labels USING btree (workspace_id);
+
+
+--
+-- Name: labels_workspace_id_name_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX labels_workspace_id_name_key ON public.labels USING btree (workspace_id, name);
+
+
+--
+-- Name: mails_workspace_id_account_id_status_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX mails_workspace_id_account_id_status_idx ON public.mails USING btree (workspace_id, account_id, status);
+
+
+--
+-- Name: mails_workspace_id_status_created_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX mails_workspace_id_status_created_at_idx ON public.mails USING btree (workspace_id, status, created_at);
+
+
+--
+-- Name: meeting_minutes_meeting_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX meeting_minutes_meeting_id_idx ON public.meeting_minutes USING btree (meeting_id);
+
+
+--
+-- Name: meeting_minutes_workspace_id_created_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX meeting_minutes_workspace_id_created_at_idx ON public.meeting_minutes USING btree (workspace_id, created_at);
+
+
+--
+-- Name: meeting_participants_meeting_id_left_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX meeting_participants_meeting_id_left_at_idx ON public.meeting_participants USING btree (meeting_id, left_at);
+
+
+--
+-- Name: meeting_participants_meeting_id_user_id_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX meeting_participants_meeting_id_user_id_key ON public.meeting_participants USING btree (meeting_id, user_id);
+
+
+--
+-- Name: meeting_participants_user_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX meeting_participants_user_id_idx ON public.meeting_participants USING btree (user_id);
+
+
+--
+-- Name: meetings_created_by_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX meetings_created_by_idx ON public.meetings USING btree (created_by);
+
+
+--
+-- Name: meetings_room_name_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX meetings_room_name_key ON public.meetings USING btree (room_name);
+
+
+--
+-- Name: meetings_workspace_id_scheduled_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX meetings_workspace_id_scheduled_at_idx ON public.meetings USING btree (workspace_id, scheduled_at);
+
+
+--
+-- Name: meetings_workspace_id_status_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX meetings_workspace_id_status_idx ON public.meetings USING btree (workspace_id, status);
+
+
+--
+-- Name: member_permissions_workspace_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX member_permissions_workspace_id_idx ON public.member_permissions USING btree (workspace_id);
+
+
+--
+-- Name: members_user_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX members_user_id_idx ON public.members USING btree (user_id);
+
+
+--
+-- Name: members_workspace_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX members_workspace_id_idx ON public.members USING btree (workspace_id);
+
+
+--
+-- Name: message_attachments_message_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX message_attachments_message_id_idx ON public.message_attachments USING btree (message_id);
+
+
+--
+-- Name: message_attachments_workspace_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX message_attachments_workspace_id_idx ON public.message_attachments USING btree (workspace_id);
+
+
+--
+-- Name: message_reads_message_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX message_reads_message_id_idx ON public.message_reads USING btree (message_id);
+
+
+--
+-- Name: message_reads_message_id_user_id_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX message_reads_message_id_user_id_key ON public.message_reads USING btree (message_id, user_id);
+
+
+--
+-- Name: message_reads_user_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX message_reads_user_id_idx ON public.message_reads USING btree (user_id);
+
+
+--
+-- Name: messages_body_tsv_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX messages_body_tsv_idx ON public.messages USING gin (body_tsv);
+
+
+--
+-- Name: messages_conversation_id_created_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX messages_conversation_id_created_at_idx ON public.messages USING btree (conversation_id, created_at);
+
+
+--
+-- Name: messages_task_id_created_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX messages_task_id_created_at_idx ON public.messages USING btree (task_id, created_at);
+
+
+--
+-- Name: messages_workspace_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX messages_workspace_id_idx ON public.messages USING btree (workspace_id);
+
+
+--
+-- Name: milestones_workspace_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX milestones_workspace_id_idx ON public.milestones USING btree (workspace_id);
+
+
+--
+-- Name: notification_preferences_user_id_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX notification_preferences_user_id_key ON public.notification_preferences USING btree (user_id);
+
+
+--
+-- Name: notifications_user_id_workspace_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX notifications_user_id_workspace_id_idx ON public.notifications USING btree (user_id, workspace_id);
+
+
+--
+-- Name: notifications_workspace_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX notifications_workspace_id_idx ON public.notifications USING btree (workspace_id);
+
+
+--
+-- Name: notifications_workspace_id_user_id_read_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX notifications_workspace_id_user_id_read_idx ON public.notifications USING btree (workspace_id, user_id, read);
+
+
+--
+-- Name: objectives_workspace_id_period_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX objectives_workspace_id_period_idx ON public.objectives USING btree (workspace_id, period);
+
+
+--
+-- Name: objectives_workspace_id_status_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX objectives_workspace_id_status_idx ON public.objectives USING btree (workspace_id, status);
+
+
+--
+-- Name: permission_audit_logs_target_type_target_id_created_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX permission_audit_logs_target_type_target_id_created_at_idx ON public.permission_audit_logs USING btree (target_type, target_id, created_at);
+
+
+--
+-- Name: permission_audit_logs_workspace_id_grantee_type_grantee_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX permission_audit_logs_workspace_id_grantee_type_grantee_id_idx ON public.permission_audit_logs USING btree (workspace_id, grantee_type, grantee_id);
+
+
+--
+-- Name: project_templates_workspace_id_category_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX project_templates_workspace_id_category_idx ON public.project_templates USING btree (workspace_id, category);
+
+
+--
+-- Name: push_subscriptions_user_id_endpoint_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX push_subscriptions_user_id_endpoint_key ON public.push_subscriptions USING btree (user_id, endpoint);
+
+
+--
+-- Name: push_subscriptions_user_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX push_subscriptions_user_id_idx ON public.push_subscriptions USING btree (user_id);
+
+
+--
+-- Name: push_tokens_token_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX push_tokens_token_idx ON public.push_tokens USING btree (token);
+
+
+--
+-- Name: push_tokens_user_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX push_tokens_user_id_idx ON public.push_tokens USING btree (user_id);
+
+
+--
+-- Name: push_tokens_user_id_platform_token_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX push_tokens_user_id_platform_token_key ON public.push_tokens USING btree (user_id, platform, token);
+
+
+--
+-- Name: remote_control_sessions_initiator_id_status_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX remote_control_sessions_initiator_id_status_idx ON public.remote_control_sessions USING btree (initiator_id, status);
+
+
+--
+-- Name: remote_control_sessions_target_id_status_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX remote_control_sessions_target_id_status_idx ON public.remote_control_sessions USING btree (target_id, status);
+
+
+--
+-- Name: remote_control_sessions_workspace_id_status_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX remote_control_sessions_workspace_id_status_idx ON public.remote_control_sessions USING btree (workspace_id, status);
+
+
+--
+-- Name: sessions_token_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX sessions_token_key ON public.sessions USING btree (token);
+
+
+--
+-- Name: sessions_user_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sessions_user_id_idx ON public.sessions USING btree (user_id);
+
+
+--
+-- Name: share_access_logs_entity_type_entity_id_accessed_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX share_access_logs_entity_type_entity_id_accessed_at_idx ON public.share_access_logs USING btree (entity_type, entity_id, accessed_at);
+
+
+--
+-- Name: share_access_logs_workspace_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX share_access_logs_workspace_id_idx ON public.share_access_logs USING btree (workspace_id);
+
+
+--
+-- Name: share_link_permissions_document_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX share_link_permissions_document_id_idx ON public.share_link_permissions USING btree (document_id);
+
+
+--
+-- Name: spaces_workspace_id_sort_order_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX spaces_workspace_id_sort_order_idx ON public.spaces USING btree (workspace_id, sort_order);
+
+
+--
+-- Name: subscriptions_stripe_customer_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX subscriptions_stripe_customer_id_idx ON public.subscriptions USING btree (stripe_customer_id);
+
+
+--
+-- Name: subscriptions_workspace_id_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX subscriptions_workspace_id_key ON public.subscriptions USING btree (workspace_id);
+
+
+--
+-- Name: task_calendar_events_connection_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX task_calendar_events_connection_id_idx ON public.task_calendar_events USING btree (connection_id);
+
+
+--
+-- Name: task_calendar_events_task_id_connection_id_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX task_calendar_events_task_id_connection_id_key ON public.task_calendar_events USING btree (task_id, connection_id);
+
+
+--
+-- Name: task_labels_label_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX task_labels_label_id_idx ON public.task_labels USING btree (label_id);
+
+
+--
+-- Name: tasks_assignee_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX tasks_assignee_id_idx ON public.tasks USING btree (assignee_id);
+
+
+--
+-- Name: tasks_parent_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX tasks_parent_id_idx ON public.tasks USING btree (parent_id);
+
+
+--
+-- Name: tasks_share_slug_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX tasks_share_slug_idx ON public.tasks USING btree (share_slug) WHERE (share_slug IS NOT NULL);
+
+
+--
+-- Name: tasks_workspace_id_created_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX tasks_workspace_id_created_at_idx ON public.tasks USING btree (workspace_id, created_at);
+
+
+--
+-- Name: tasks_workspace_id_deleted_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX tasks_workspace_id_deleted_at_idx ON public.tasks USING btree (workspace_id, deleted_at);
+
+
+--
+-- Name: tasks_workspace_id_milestone_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX tasks_workspace_id_milestone_id_idx ON public.tasks USING btree (workspace_id, milestone_id);
+
+
+--
+-- Name: tasks_workspace_id_status_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX tasks_workspace_id_status_idx ON public.tasks USING btree (workspace_id, status);
+
+
+--
+-- Name: temporary_grants_user_id_workspace_id_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX temporary_grants_user_id_workspace_id_key ON public.temporary_grants USING btree (user_id, workspace_id);
+
+
+--
+-- Name: temporary_grants_workspace_id_expires_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX temporary_grants_workspace_id_expires_at_idx ON public.temporary_grants USING btree (workspace_id, expires_at);
+
+
+--
+-- Name: time_entries_task_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX time_entries_task_id_idx ON public.time_entries USING btree (task_id);
+
+
+--
+-- Name: time_entries_workspace_id_user_id_start_time_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX time_entries_workspace_id_user_id_start_time_idx ON public.time_entries USING btree (workspace_id, user_id, start_time);
+
+
+--
+-- Name: uq_chat_presences_conversation_user; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX uq_chat_presences_conversation_user ON public.chat_presences USING btree (conversation_id, user_id);
+
+
+--
+-- Name: uq_chat_presences_task_user; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX uq_chat_presences_task_user ON public.chat_presences USING btree (task_id, user_id);
+
+
+--
+-- Name: uq_conversations_task_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX uq_conversations_task_id ON public.conversations USING btree (task_id);
+
+
+--
+-- Name: uq_doc_versions_doc_version; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX uq_doc_versions_doc_version ON public.document_versions USING btree (document_id, version);
+
+
+--
+-- Name: uq_invitations_pending; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX uq_invitations_pending ON public.invitations USING btree (workspace_id, email) WHERE (accepted_at IS NULL);
+
+
+--
+-- Name: uq_member_perm; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX uq_member_perm ON public.member_permissions USING btree (workspace_id, role, module);
+
+
+--
+-- Name: uq_spaces_workspace_name; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX uq_spaces_workspace_name ON public.spaces USING btree (workspace_id, name);
+
+
+--
+-- Name: user_dashboard_prefs_user_id_workspace_id_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX user_dashboard_prefs_user_id_workspace_id_key ON public.user_dashboard_prefs USING btree (user_id, workspace_id);
+
+
+--
+-- Name: users_email_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX users_email_key ON public.users USING btree (email);
+
+
+--
+-- Name: whiteboards_workspace_id_updated_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX whiteboards_workspace_id_updated_at_idx ON public.whiteboards USING btree (workspace_id, updated_at);
+
+
+--
+-- Name: wiki_pages_content_tsv_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX wiki_pages_content_tsv_idx ON public.wiki_pages USING gin (content_tsv);
+
+
+--
+-- Name: wiki_pages_workspace_id_parent_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX wiki_pages_workspace_id_parent_id_idx ON public.wiki_pages USING btree (workspace_id, parent_id);
+
+
+--
+-- Name: wiki_pages_workspace_id_slug_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX wiki_pages_workspace_id_slug_key ON public.wiki_pages USING btree (workspace_id, slug);
+
+
+--
+-- Name: wiki_pages_workspace_id_updated_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX wiki_pages_workspace_id_updated_at_idx ON public.wiki_pages USING btree (workspace_id, updated_at);
+
+
+--
+-- Name: workflow_executions_workflow_id_created_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX workflow_executions_workflow_id_created_at_idx ON public.workflow_executions USING btree (workflow_id, created_at);
+
+
+--
+-- Name: workflow_executions_workspace_id_status_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX workflow_executions_workspace_id_status_idx ON public.workflow_executions USING btree (workspace_id, status);
+
+
+--
+-- Name: workflows_workspace_id_active_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX workflows_workspace_id_active_idx ON public.workflows USING btree (workspace_id, active);
+
+
+--
+-- Name: workspaces_owner_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX workspaces_owner_id_idx ON public.workspaces USING btree (owner_id);
+
+
+--
+-- Name: workspaces_slug_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX workspaces_slug_key ON public.workspaces USING btree (slug);
+
+
+--
+-- Name: yjs_persistence_document_id_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX yjs_persistence_document_id_key ON public.yjs_persistence USING btree (document_id);
+
+
+--
+-- Name: accounts accounts_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.accounts
+    ADD CONSTRAINT accounts_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: ai_agent_messages ai_agent_messages_from_agent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_agent_messages
+    ADD CONSTRAINT ai_agent_messages_from_agent_id_fkey FOREIGN KEY (from_agent_id) REFERENCES public.ai_agents(id) ON DELETE CASCADE;
+
+
+--
+-- Name: ai_agent_messages ai_agent_messages_to_agent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_agent_messages
+    ADD CONSTRAINT ai_agent_messages_to_agent_id_fkey FOREIGN KEY (to_agent_id) REFERENCES public.ai_agents(id) ON DELETE SET NULL;
+
+
+--
+-- Name: ai_agent_messages ai_agent_messages_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_agent_messages
+    ADD CONSTRAINT ai_agent_messages_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: ai_agents ai_agents_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_agents
+    ADD CONSTRAINT ai_agents_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: ai_analysis_reports ai_analysis_reports_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_analysis_reports
+    ADD CONSTRAINT ai_analysis_reports_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: ai_analysis_reports ai_analysis_reports_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_analysis_reports
+    ADD CONSTRAINT ai_analysis_reports_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: ai_conversations ai_conversations_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_conversations
+    ADD CONSTRAINT ai_conversations_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: ai_conversations ai_conversations_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_conversations
+    ADD CONSTRAINT ai_conversations_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: ai_feedback ai_feedback_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_feedback
+    ADD CONSTRAINT ai_feedback_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: ai_feedback ai_feedback_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_feedback
+    ADD CONSTRAINT ai_feedback_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: ai_meeting_action_items ai_meeting_action_items_session_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_meeting_action_items
+    ADD CONSTRAINT ai_meeting_action_items_session_id_fkey FOREIGN KEY (session_id) REFERENCES public.ai_meeting_sessions(id) ON DELETE CASCADE;
+
+
+--
+-- Name: ai_meeting_action_items ai_meeting_action_items_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_meeting_action_items
+    ADD CONSTRAINT ai_meeting_action_items_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: ai_meeting_decisions ai_meeting_decisions_session_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_meeting_decisions
+    ADD CONSTRAINT ai_meeting_decisions_session_id_fkey FOREIGN KEY (session_id) REFERENCES public.ai_meeting_sessions(id) ON DELETE CASCADE;
+
+
+--
+-- Name: ai_meeting_decisions ai_meeting_decisions_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_meeting_decisions
+    ADD CONSTRAINT ai_meeting_decisions_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: ai_meeting_sessions ai_meeting_sessions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_meeting_sessions
+    ADD CONSTRAINT ai_meeting_sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: ai_meeting_sessions ai_meeting_sessions_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_meeting_sessions
+    ADD CONSTRAINT ai_meeting_sessions_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: ai_messages ai_messages_conversation_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_messages
+    ADD CONSTRAINT ai_messages_conversation_id_fkey FOREIGN KEY (conversation_id) REFERENCES public.ai_conversations(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: ai_personalizations ai_personalizations_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_personalizations
+    ADD CONSTRAINT ai_personalizations_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: ai_personalizations ai_personalizations_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_personalizations
+    ADD CONSTRAINT ai_personalizations_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: ai_push_records ai_push_records_schedule_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_push_records
+    ADD CONSTRAINT ai_push_records_schedule_id_fkey FOREIGN KEY (schedule_id) REFERENCES public.ai_push_schedules(id) ON DELETE CASCADE;
+
+
+--
+-- Name: ai_push_records ai_push_records_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_push_records
+    ADD CONSTRAINT ai_push_records_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: ai_push_records ai_push_records_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_push_records
+    ADD CONSTRAINT ai_push_records_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: ai_push_schedules ai_push_schedules_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_push_schedules
+    ADD CONSTRAINT ai_push_schedules_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: ai_push_schedules ai_push_schedules_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_push_schedules
+    ADD CONSTRAINT ai_push_schedules_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: ai_usage_limits ai_usage_limits_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_usage_limits
+    ADD CONSTRAINT ai_usage_limits_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: ai_usage_limits ai_usage_limits_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_usage_limits
+    ADD CONSTRAINT ai_usage_limits_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: ai_usage_logs ai_usage_logs_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_usage_logs
+    ADD CONSTRAINT ai_usage_logs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: ai_usage_logs ai_usage_logs_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_usage_logs
+    ADD CONSTRAINT ai_usage_logs_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: ai_user_behaviors ai_user_behaviors_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_user_behaviors
+    ADD CONSTRAINT ai_user_behaviors_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: ai_user_behaviors ai_user_behaviors_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_user_behaviors
+    ADD CONSTRAINT ai_user_behaviors_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: ai_voice_commands ai_voice_commands_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_voice_commands
+    ADD CONSTRAINT ai_voice_commands_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: ai_voice_commands ai_voice_commands_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_voice_commands
+    ADD CONSTRAINT ai_voice_commands_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: ai_voice_preferences ai_voice_preferences_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_voice_preferences
+    ADD CONSTRAINT ai_voice_preferences_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: ai_workflow_templates ai_workflow_templates_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_workflow_templates
+    ADD CONSTRAINT ai_workflow_templates_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: analytics_events analytics_events_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_events
+    ADD CONSTRAINT analytics_events_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: analytics_events analytics_events_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_events
+    ADD CONSTRAINT analytics_events_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: announcements announcements_published_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.announcements
+    ADD CONSTRAINT announcements_published_by_fkey FOREIGN KEY (published_by) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: announcements announcements_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.announcements
+    ADD CONSTRAINT announcements_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: approval_cc_records approval_cc_records_instance_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.approval_cc_records
+    ADD CONSTRAINT approval_cc_records_instance_id_fkey FOREIGN KEY (instance_id) REFERENCES public.approval_instances(id) ON DELETE CASCADE;
+
+
+--
+-- Name: approval_cc_records approval_cc_records_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.approval_cc_records
+    ADD CONSTRAINT approval_cc_records_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: approval_cc_records approval_cc_records_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.approval_cc_records
+    ADD CONSTRAINT approval_cc_records_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: approval_delegates approval_delegates_delegate_to_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.approval_delegates
+    ADD CONSTRAINT approval_delegates_delegate_to_id_fkey FOREIGN KEY (delegate_to_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: approval_delegates approval_delegates_delegator_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.approval_delegates
+    ADD CONSTRAINT approval_delegates_delegator_id_fkey FOREIGN KEY (delegator_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: approval_delegates approval_delegates_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.approval_delegates
+    ADD CONSTRAINT approval_delegates_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: approval_instances approval_instances_applicant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.approval_instances
+    ADD CONSTRAINT approval_instances_applicant_id_fkey FOREIGN KEY (applicant_id) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: approval_instances approval_instances_template_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.approval_instances
+    ADD CONSTRAINT approval_instances_template_id_fkey FOREIGN KEY (template_id) REFERENCES public.approval_templates(id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: approval_instances approval_instances_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.approval_instances
+    ADD CONSTRAINT approval_instances_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: approval_operations approval_operations_instance_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.approval_operations
+    ADD CONSTRAINT approval_operations_instance_id_fkey FOREIGN KEY (instance_id) REFERENCES public.approval_instances(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: approval_operations approval_operations_operator_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.approval_operations
+    ADD CONSTRAINT approval_operations_operator_id_fkey FOREIGN KEY (operator_id) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: approval_operations approval_operations_transfer_to_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.approval_operations
+    ADD CONSTRAINT approval_operations_transfer_to_id_fkey FOREIGN KEY (transfer_to_id) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: approval_operations approval_operations_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.approval_operations
+    ADD CONSTRAINT approval_operations_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: approval_templates approval_templates_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.approval_templates
+    ADD CONSTRAINT approval_templates_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: approval_templates approval_templates_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.approval_templates
+    ADD CONSTRAINT approval_templates_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: assistant_messages assistant_messages_conversation_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.assistant_messages
+    ADD CONSTRAINT assistant_messages_conversation_id_fkey FOREIGN KEY (conversation_id) REFERENCES public.assistant_conversations(id) ON DELETE CASCADE;
+
+
+--
+-- Name: calendar_connections calendar_connections_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.calendar_connections
+    ADD CONSTRAINT calendar_connections_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: calendar_events calendar_events_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.calendar_events
+    ADD CONSTRAINT calendar_events_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: calendar_events calendar_events_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.calendar_events
+    ADD CONSTRAINT calendar_events_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: chat_presences chat_presences_conversation_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.chat_presences
+    ADD CONSTRAINT chat_presences_conversation_id_fkey FOREIGN KEY (conversation_id) REFERENCES public.conversations(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: chat_presences chat_presences_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.chat_presences
+    ADD CONSTRAINT chat_presences_task_id_fkey FOREIGN KEY (task_id) REFERENCES public.tasks(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: chat_presences chat_presences_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.chat_presences
+    ADD CONSTRAINT chat_presences_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: comments comments_author_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.comments
+    ADD CONSTRAINT comments_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: comments comments_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.comments
+    ADD CONSTRAINT comments_task_id_fkey FOREIGN KEY (task_id) REFERENCES public.tasks(id) ON DELETE CASCADE;
+
+
+--
+-- Name: comments comments_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.comments
+    ADD CONSTRAINT comments_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: contact_groups contact_groups_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.contact_groups
+    ADD CONSTRAINT contact_groups_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: contacts contacts_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.contacts
+    ADD CONSTRAINT contacts_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: contacts contacts_group_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.contacts
+    ADD CONSTRAINT contacts_group_id_fkey FOREIGN KEY (group_id) REFERENCES public.contact_groups(id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: contacts contacts_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.contacts
+    ADD CONSTRAINT contacts_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: conversation_members conversation_members_conversation_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.conversation_members
+    ADD CONSTRAINT conversation_members_conversation_id_fkey FOREIGN KEY (conversation_id) REFERENCES public.conversations(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: conversation_members conversation_members_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.conversation_members
+    ADD CONSTRAINT conversation_members_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: conversations conversations_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.conversations
+    ADD CONSTRAINT conversations_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: conversations conversations_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.conversations
+    ADD CONSTRAINT conversations_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: database_fields database_fields_database_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.database_fields
+    ADD CONSTRAINT database_fields_database_id_fkey FOREIGN KEY (database_id) REFERENCES public.databases(id) ON DELETE CASCADE;
+
+
+--
+-- Name: database_records database_records_database_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.database_records
+    ADD CONSTRAINT database_records_database_id_fkey FOREIGN KEY (database_id) REFERENCES public.databases(id) ON DELETE CASCADE;
+
+
+--
+-- Name: database_views database_views_database_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.database_views
+    ADD CONSTRAINT database_views_database_id_fkey FOREIGN KEY (database_id) REFERENCES public.databases(id) ON DELETE CASCADE;
+
+
+--
+-- Name: databases databases_folder_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.databases
+    ADD CONSTRAINT databases_folder_id_fkey FOREIGN KEY (folder_id) REFERENCES public.folders(id) ON DELETE SET NULL;
+
+
+--
+-- Name: databases databases_space_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.databases
+    ADD CONSTRAINT databases_space_id_fkey FOREIGN KEY (space_id) REFERENCES public.spaces(id) ON DELETE SET NULL;
+
+
+--
+-- Name: databases databases_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.databases
+    ADD CONSTRAINT databases_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: decision_action_items decision_action_items_assignee_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.decision_action_items
+    ADD CONSTRAINT decision_action_items_assignee_id_fkey FOREIGN KEY (assignee_id) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: decision_action_items decision_action_items_decision_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.decision_action_items
+    ADD CONSTRAINT decision_action_items_decision_id_fkey FOREIGN KEY (decision_id) REFERENCES public.decisions(id) ON DELETE CASCADE;
+
+
+--
+-- Name: decision_action_items decision_action_items_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.decision_action_items
+    ADD CONSTRAINT decision_action_items_task_id_fkey FOREIGN KEY (task_id) REFERENCES public.tasks(id) ON DELETE SET NULL;
+
+
+--
+-- Name: decision_versions decision_versions_author_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.decision_versions
+    ADD CONSTRAINT decision_versions_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: decision_versions decision_versions_decision_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.decision_versions
+    ADD CONSTRAINT decision_versions_decision_id_fkey FOREIGN KEY (decision_id) REFERENCES public.decisions(id) ON DELETE CASCADE;
+
+
+--
+-- Name: decision_versions decision_versions_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.decision_versions
+    ADD CONSTRAINT decision_versions_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: decisions decisions_author_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.decisions
+    ADD CONSTRAINT decisions_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: decisions decisions_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.decisions
+    ADD CONSTRAINT decisions_task_id_fkey FOREIGN KEY (task_id) REFERENCES public.tasks(id) ON DELETE CASCADE;
+
+
+--
+-- Name: decisions decisions_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.decisions
+    ADD CONSTRAINT decisions_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: deliverables deliverables_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deliverables
+    ADD CONSTRAINT deliverables_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: deliverables deliverables_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deliverables
+    ADD CONSTRAINT deliverables_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: document_comments document_comments_author_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.document_comments
+    ADD CONSTRAINT document_comments_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: document_comments document_comments_document_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.document_comments
+    ADD CONSTRAINT document_comments_document_id_fkey FOREIGN KEY (document_id) REFERENCES public.documents(id) ON DELETE CASCADE;
+
+
+--
+-- Name: document_comments document_comments_parent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.document_comments
+    ADD CONSTRAINT document_comments_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES public.document_comments(id) ON DELETE CASCADE;
+
+
+--
+-- Name: document_comments document_comments_resolved_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.document_comments
+    ADD CONSTRAINT document_comments_resolved_by_fkey FOREIGN KEY (resolved_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: document_comments document_comments_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.document_comments
+    ADD CONSTRAINT document_comments_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: document_permissions document_permissions_document_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.document_permissions
+    ADD CONSTRAINT document_permissions_document_id_fkey FOREIGN KEY (document_id) REFERENCES public.documents(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: document_permissions document_permissions_granted_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.document_permissions
+    ADD CONSTRAINT document_permissions_granted_by_fkey FOREIGN KEY (granted_by) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: document_permissions document_permissions_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.document_permissions
+    ADD CONSTRAINT document_permissions_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: document_versions document_versions_author_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.document_versions
+    ADD CONSTRAINT document_versions_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: document_versions document_versions_document_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.document_versions
+    ADD CONSTRAINT document_versions_document_id_fkey FOREIGN KEY (document_id) REFERENCES public.documents(id) ON DELETE CASCADE;
+
+
+--
+-- Name: document_versions document_versions_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.document_versions
+    ADD CONSTRAINT document_versions_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: documents documents_author_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.documents
+    ADD CONSTRAINT documents_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: documents documents_folder_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.documents
+    ADD CONSTRAINT documents_folder_id_fkey FOREIGN KEY (folder_id) REFERENCES public.folders(id) ON DELETE SET NULL;
+
+
+--
+-- Name: documents documents_space_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.documents
+    ADD CONSTRAINT documents_space_id_fkey FOREIGN KEY (space_id) REFERENCES public.spaces(id) ON DELETE SET NULL;
+
+
+--
+-- Name: documents documents_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.documents
+    ADD CONSTRAINT documents_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: email_accounts email_accounts_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.email_accounts
+    ADD CONSTRAINT email_accounts_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: email_accounts email_accounts_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.email_accounts
+    ADD CONSTRAINT email_accounts_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: favorites favorites_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.favorites
+    ADD CONSTRAINT favorites_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: favorites favorites_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.favorites
+    ADD CONSTRAINT favorites_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: file_assets file_assets_folder_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.file_assets
+    ADD CONSTRAINT file_assets_folder_id_fkey FOREIGN KEY (folder_id) REFERENCES public.folders(id) ON DELETE SET NULL;
+
+
+--
+-- Name: file_assets file_assets_uploaded_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.file_assets
+    ADD CONSTRAINT file_assets_uploaded_by_fkey FOREIGN KEY (uploaded_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: file_assets file_assets_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.file_assets
+    ADD CONSTRAINT file_assets_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: file_versions file_versions_file_asset_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.file_versions
+    ADD CONSTRAINT file_versions_file_asset_id_fkey FOREIGN KEY (file_asset_id) REFERENCES public.file_assets(id) ON DELETE CASCADE;
+
+
+--
+-- Name: file_versions file_versions_uploaded_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.file_versions
+    ADD CONSTRAINT file_versions_uploaded_by_fkey FOREIGN KEY (uploaded_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: folder_permissions folder_permissions_granted_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.folder_permissions
+    ADD CONSTRAINT folder_permissions_granted_by_fkey FOREIGN KEY (granted_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: folder_permissions folder_permissions_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.folder_permissions
+    ADD CONSTRAINT folder_permissions_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: folders folders_parent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.folders
+    ADD CONSTRAINT folders_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES public.folders(id) ON DELETE CASCADE;
+
+
+--
+-- Name: folders folders_space_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.folders
+    ADD CONSTRAINT folders_space_id_fkey FOREIGN KEY (space_id) REFERENCES public.spaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: folders folders_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.folders
+    ADD CONSTRAINT folders_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: form_submissions form_submissions_form_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.form_submissions
+    ADD CONSTRAINT form_submissions_form_id_fkey FOREIGN KEY (form_id) REFERENCES public.forms(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: form_submissions form_submissions_submitted_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.form_submissions
+    ADD CONSTRAINT form_submissions_submitted_by_fkey FOREIGN KEY (submitted_by) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: form_submissions form_submissions_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.form_submissions
+    ADD CONSTRAINT form_submissions_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: forms forms_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.forms
+    ADD CONSTRAINT forms_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: forms forms_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.forms
+    ADD CONSTRAINT forms_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: gov_doc_attachments gov_doc_attachments_gov_doc_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.gov_doc_attachments
+    ADD CONSTRAINT gov_doc_attachments_gov_doc_id_fkey FOREIGN KEY (gov_doc_id) REFERENCES public.gov_docs(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: gov_doc_attachments gov_doc_attachments_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.gov_doc_attachments
+    ADD CONSTRAINT gov_doc_attachments_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: gov_doc_exchanges gov_doc_exchanges_gov_doc_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.gov_doc_exchanges
+    ADD CONSTRAINT gov_doc_exchanges_gov_doc_id_fkey FOREIGN KEY (gov_doc_id) REFERENCES public.gov_docs(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: gov_doc_exchanges gov_doc_exchanges_operator_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.gov_doc_exchanges
+    ADD CONSTRAINT gov_doc_exchanges_operator_id_fkey FOREIGN KEY (operator_id) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: gov_doc_exchanges gov_doc_exchanges_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.gov_doc_exchanges
+    ADD CONSTRAINT gov_doc_exchanges_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: gov_doc_opinions gov_doc_opinions_author_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.gov_doc_opinions
+    ADD CONSTRAINT gov_doc_opinions_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: gov_doc_opinions gov_doc_opinions_gov_doc_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.gov_doc_opinions
+    ADD CONSTRAINT gov_doc_opinions_gov_doc_id_fkey FOREIGN KEY (gov_doc_id) REFERENCES public.gov_docs(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: gov_doc_opinions gov_doc_opinions_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.gov_doc_opinions
+    ADD CONSTRAINT gov_doc_opinions_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: gov_docs gov_docs_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.gov_docs
+    ADD CONSTRAINT gov_docs_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: gov_docs gov_docs_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.gov_docs
+    ADD CONSTRAINT gov_docs_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: invitations invitations_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.invitations
+    ADD CONSTRAINT invitations_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: key_results key_results_objective_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.key_results
+    ADD CONSTRAINT key_results_objective_id_fkey FOREIGN KEY (objective_id) REFERENCES public.objectives(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: key_results key_results_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.key_results
+    ADD CONSTRAINT key_results_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: knowledge_edges knowledge_edges_source_node_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.knowledge_edges
+    ADD CONSTRAINT knowledge_edges_source_node_id_fkey FOREIGN KEY (source_node_id) REFERENCES public.knowledge_nodes(id) ON DELETE CASCADE;
+
+
+--
+-- Name: knowledge_edges knowledge_edges_target_node_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.knowledge_edges
+    ADD CONSTRAINT knowledge_edges_target_node_id_fkey FOREIGN KEY (target_node_id) REFERENCES public.knowledge_nodes(id) ON DELETE CASCADE;
+
+
+--
+-- Name: knowledge_edges knowledge_edges_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.knowledge_edges
+    ADD CONSTRAINT knowledge_edges_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: knowledge_nodes knowledge_nodes_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.knowledge_nodes
+    ADD CONSTRAINT knowledge_nodes_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: labels labels_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.labels
+    ADD CONSTRAINT labels_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: mails mails_account_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.mails
+    ADD CONSTRAINT mails_account_id_fkey FOREIGN KEY (account_id) REFERENCES public.email_accounts(id) ON DELETE CASCADE;
+
+
+--
+-- Name: mails mails_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.mails
+    ADD CONSTRAINT mails_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: meeting_minutes meeting_minutes_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.meeting_minutes
+    ADD CONSTRAINT meeting_minutes_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: meeting_minutes meeting_minutes_meeting_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.meeting_minutes
+    ADD CONSTRAINT meeting_minutes_meeting_id_fkey FOREIGN KEY (meeting_id) REFERENCES public.meetings(id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: meeting_minutes meeting_minutes_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.meeting_minutes
+    ADD CONSTRAINT meeting_minutes_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: meeting_participants meeting_participants_meeting_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.meeting_participants
+    ADD CONSTRAINT meeting_participants_meeting_id_fkey FOREIGN KEY (meeting_id) REFERENCES public.meetings(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: meeting_participants meeting_participants_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.meeting_participants
+    ADD CONSTRAINT meeting_participants_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: meetings meetings_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.meetings
+    ADD CONSTRAINT meetings_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: meetings meetings_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.meetings
+    ADD CONSTRAINT meetings_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: member_permissions member_permissions_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.member_permissions
+    ADD CONSTRAINT member_permissions_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: members members_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.members
+    ADD CONSTRAINT members_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: members members_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.members
+    ADD CONSTRAINT members_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: message_attachments message_attachments_message_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.message_attachments
+    ADD CONSTRAINT message_attachments_message_id_fkey FOREIGN KEY (message_id) REFERENCES public.messages(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: message_attachments message_attachments_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.message_attachments
+    ADD CONSTRAINT message_attachments_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: message_reads message_reads_message_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.message_reads
+    ADD CONSTRAINT message_reads_message_id_fkey FOREIGN KEY (message_id) REFERENCES public.messages(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: message_reads message_reads_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.message_reads
+    ADD CONSTRAINT message_reads_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: messages messages_author_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.messages
+    ADD CONSTRAINT messages_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: messages messages_conversation_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.messages
+    ADD CONSTRAINT messages_conversation_id_fkey FOREIGN KEY (conversation_id) REFERENCES public.conversations(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: messages messages_reply_to_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.messages
+    ADD CONSTRAINT messages_reply_to_id_fkey FOREIGN KEY (reply_to_id) REFERENCES public.messages(id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: messages messages_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.messages
+    ADD CONSTRAINT messages_task_id_fkey FOREIGN KEY (task_id) REFERENCES public.tasks(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: messages messages_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.messages
+    ADD CONSTRAINT messages_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: milestones milestones_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.milestones
+    ADD CONSTRAINT milestones_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: notification_preferences notification_preferences_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.notification_preferences
+    ADD CONSTRAINT notification_preferences_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: notifications notifications_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.notifications
+    ADD CONSTRAINT notifications_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: notifications notifications_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.notifications
+    ADD CONSTRAINT notifications_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: objectives objectives_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.objectives
+    ADD CONSTRAINT objectives_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: objectives objectives_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.objectives
+    ADD CONSTRAINT objectives_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: permission_audit_logs permission_audit_logs_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.permission_audit_logs
+    ADD CONSTRAINT permission_audit_logs_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: project_templates project_templates_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_templates
+    ADD CONSTRAINT project_templates_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: project_templates project_templates_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_templates
+    ADD CONSTRAINT project_templates_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: push_subscriptions push_subscriptions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.push_subscriptions
+    ADD CONSTRAINT push_subscriptions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: push_tokens push_tokens_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.push_tokens
+    ADD CONSTRAINT push_tokens_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: remote_control_sessions remote_control_sessions_initiator_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.remote_control_sessions
+    ADD CONSTRAINT remote_control_sessions_initiator_id_fkey FOREIGN KEY (initiator_id) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: remote_control_sessions remote_control_sessions_target_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.remote_control_sessions
+    ADD CONSTRAINT remote_control_sessions_target_id_fkey FOREIGN KEY (target_id) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: remote_control_sessions remote_control_sessions_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.remote_control_sessions
+    ADD CONSTRAINT remote_control_sessions_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: sessions sessions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sessions
+    ADD CONSTRAINT sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: share_access_logs share_access_logs_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.share_access_logs
+    ADD CONSTRAINT share_access_logs_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: share_link_permissions share_link_permissions_document_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.share_link_permissions
+    ADD CONSTRAINT share_link_permissions_document_id_fkey FOREIGN KEY (document_id) REFERENCES public.documents(id) ON DELETE CASCADE;
+
+
+--
+-- Name: share_link_permissions share_link_permissions_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.share_link_permissions
+    ADD CONSTRAINT share_link_permissions_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: spaces spaces_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.spaces
+    ADD CONSTRAINT spaces_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: subscriptions subscriptions_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscriptions
+    ADD CONSTRAINT subscriptions_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: task_calendar_events task_calendar_events_connection_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.task_calendar_events
+    ADD CONSTRAINT task_calendar_events_connection_id_fkey FOREIGN KEY (connection_id) REFERENCES public.calendar_connections(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: task_calendar_events task_calendar_events_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.task_calendar_events
+    ADD CONSTRAINT task_calendar_events_task_id_fkey FOREIGN KEY (task_id) REFERENCES public.tasks(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: task_labels task_labels_label_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.task_labels
+    ADD CONSTRAINT task_labels_label_id_fkey FOREIGN KEY (label_id) REFERENCES public.labels(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: task_labels task_labels_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.task_labels
+    ADD CONSTRAINT task_labels_task_id_fkey FOREIGN KEY (task_id) REFERENCES public.tasks(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: tasks tasks_assignee_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tasks
+    ADD CONSTRAINT tasks_assignee_id_fkey FOREIGN KEY (assignee_id) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: tasks tasks_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tasks
+    ADD CONSTRAINT tasks_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: tasks tasks_milestone_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tasks
+    ADD CONSTRAINT tasks_milestone_id_fkey FOREIGN KEY (milestone_id) REFERENCES public.milestones(id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: tasks tasks_parent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tasks
+    ADD CONSTRAINT tasks_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES public.tasks(id) ON DELETE CASCADE;
+
+
+--
+-- Name: tasks tasks_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tasks
+    ADD CONSTRAINT tasks_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: temporary_grants temporary_grants_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.temporary_grants
+    ADD CONSTRAINT temporary_grants_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: temporary_grants temporary_grants_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.temporary_grants
+    ADD CONSTRAINT temporary_grants_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: time_entries time_entries_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.time_entries
+    ADD CONSTRAINT time_entries_task_id_fkey FOREIGN KEY (task_id) REFERENCES public.tasks(id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: time_entries time_entries_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.time_entries
+    ADD CONSTRAINT time_entries_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: time_entries time_entries_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.time_entries
+    ADD CONSTRAINT time_entries_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: user_dashboard_prefs user_dashboard_prefs_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_dashboard_prefs
+    ADD CONSTRAINT user_dashboard_prefs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: user_dashboard_prefs user_dashboard_prefs_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_dashboard_prefs
+    ADD CONSTRAINT user_dashboard_prefs_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: whiteboards whiteboards_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.whiteboards
+    ADD CONSTRAINT whiteboards_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: whiteboards whiteboards_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.whiteboards
+    ADD CONSTRAINT whiteboards_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: wiki_pages wiki_pages_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wiki_pages
+    ADD CONSTRAINT wiki_pages_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: wiki_pages wiki_pages_parent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wiki_pages
+    ADD CONSTRAINT wiki_pages_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES public.wiki_pages(id) ON DELETE SET NULL;
+
+
+--
+-- Name: wiki_pages wiki_pages_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wiki_pages
+    ADD CONSTRAINT wiki_pages_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: workflow_executions workflow_executions_workflow_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.workflow_executions
+    ADD CONSTRAINT workflow_executions_workflow_id_fkey FOREIGN KEY (workflow_id) REFERENCES public.workflows(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: workflow_executions workflow_executions_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.workflow_executions
+    ADD CONSTRAINT workflow_executions_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: workflows workflows_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.workflows
+    ADD CONSTRAINT workflows_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: workflows workflows_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.workflows
+    ADD CONSTRAINT workflows_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: workspaces workspaces_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.workspaces
+    ADD CONSTRAINT workspaces_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: yjs_persistence yjs_persistence_document_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.yjs_persistence
+    ADD CONSTRAINT yjs_persistence_document_id_fkey FOREIGN KEY (document_id) REFERENCES public.documents(id) ON DELETE CASCADE;
+
+
+--
+-- PostgreSQL database dump complete
+--
+
+\unrestrict w1Zh9LFbpTbNUtUFjdaATtXuGt3x11Pnn7VYjDs1s6m4VlDw8u91VdyW75QhUsK
+
