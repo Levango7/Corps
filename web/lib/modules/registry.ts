@@ -133,6 +133,14 @@ export const WORKSPACE_MODULES: readonly WorkspaceModule[] = [
     icon: "mail",
     group: "collaboration",
   },
+  // AI 交付域（nexusloom sidecar；DAG 藏内部，用户只见阶段条与交付物）
+  {
+    id: "deliverables",
+    path: "/deliverables",
+    labelKey: "menu.deliverables",
+    icon: "deliverables",
+    group: "collaboration",
+  },
   {
     id: "remote-control",
     path: "/remote-control",

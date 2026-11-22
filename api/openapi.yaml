@@ -9,7 +9,7 @@ info:
     row for that workspace, then runs all tenant queries inside a transaction with
     app.workspace_id / app.user_id set (RLS binds at engine level in hardened
     deployments — see db/schema.sql).
-    Coverage: this contract declares 294 paths (updated 2026-11-22). The service also
+    Coverage: this contract declares 296 paths (updated 2026-11-22). The service also
     exposes additional routes that are not yet documented here; the authoritative
     gap list and its drift guard live in scripts/check_api_contract.py and
     scripts/api-contract-baseline.txt. New routes must be added here, or explicitly
@@ -10766,6 +10766,68 @@ paths:
           description: Sync summary
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/deliverables:
+    get:
+      tags: [ai]
+      summary: List delivery tasks from the sidecar runtime
+      description: >-
+        Passthrough list of delivery tasks known to the nexusloom sidecar
+        (local self-hosted delivery runtime). Requires workspace membership.
+      operationId: listAiDeliverables
+      parameters:
+        - $ref: '#/components/parameters/WidQuery'
+      responses:
+        '200':
+          description: Task list envelope
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '502':
+          description: Delivery runtime unavailable
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [ai]
+      summary: Submit a delivery task to the sidecar runtime
+      description: >-
+        Submits a document-generation task to the nexusloom sidecar (async;
+        poll by task id). Body { wid, query, title?, pipeline? } where pipeline
+        is one of docgen / docgen-lean / docgen-verified / docgen-render / kb-docgen.
+        Rate limited to 10 per minute.
+      operationId: submitAiDeliverable
+      responses:
+        '200':
+          description: Enqueued task envelope (taskId + pipeline)
+        '400':
+          description: Invalid body
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '502':
+          description: Delivery runtime unavailable
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/deliverables/{id}:
+    get:
+      tags: [ai]
+      summary: Delivery task detail
+      description: >-
+        Task detail including output content and artifact path. 404 when the
+        sidecar reports the task unknown or purged.
+      operationId: getAiDeliverable
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, pattern: '^[A-Za-z0-9_-]{1,128}$' }
+        - $ref: '#/components/parameters/WidQuery'
+      responses:
+        '200':
+          description: Task detail envelope
+        '404':
+          description: Task not found on the sidecar
+        '502':
+          description: Delivery runtime unavailable
         '500':
           $ref: '#/components/responses/InternalError'
   /api/v1/mail/send:
