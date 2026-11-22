@@ -3317,7 +3317,8 @@
       "sidecarDown": "交付服务未就绪（本地交付运行时未启动），请先启动 nexusloom 服务",
       "noOutputYet": "该任务暂无可展示的交付内容",
       "outputPath": "产出路径",
-      "error": "加载失败"
+      "error": "加载失败",
+      "download": "下载"
     }
   },
   "doc": {

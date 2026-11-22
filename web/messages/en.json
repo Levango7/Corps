@@ -3317,7 +3317,8 @@
       "sidecarDown": "Delivery service is not ready (local delivery runtime not started). Start the nexusloom service first.",
       "noOutputYet": "No deliverable content to show yet",
       "outputPath": "Output path",
-      "error": "Failed to load"
+      "error": "Failed to load",
+      "download": "Download"
     }
   },
   "doc": {

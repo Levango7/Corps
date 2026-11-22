@@ -281,6 +281,10 @@ export const API_MESSAGES = {
     zh: "交付任务不存在或已被清理",
     en: "Delivery task not found or already purged.",
   },
+  aiDeliveryNoFile: {
+    zh: "该任务没有可下载的交付文件（仅渲染流水线产出文件产物）",
+    en: "No downloadable artifact for this task (only the render pipeline produces files).",
+  },
 
   /* ── 邮箱验证 ── */
   emailNotVerified: {
