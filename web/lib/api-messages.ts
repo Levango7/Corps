@@ -266,6 +266,12 @@ export const API_MESSAGES = {
     en: "This workspace's AI usage limit has been reached (tokens or calls). Ask a workspace admin to raise the limit, or wait for the daily/monthly reset.",
   },
 
+  /* ── AI 输出格式异常（2026-11-22：解析失败不再伪装 500，语义=上游模型输出不可解析，可重试）── */
+  aiOutputFormatError: {
+    zh: "AI 本次输出的内容无法解析，请重试一次；若持续出现请联系管理员",
+    en: "The AI response could not be parsed this time. Please try again; contact an admin if it keeps happening.",
+  },
+
   /* ── 邮箱验证 ── */
   emailNotVerified: {
     zh: "邮箱尚未验证：请先点击注册邮件中的验证链接，再登录",
