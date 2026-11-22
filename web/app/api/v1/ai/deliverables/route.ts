@@ -1,21 +1,24 @@
-// GET  /api/v1/ai/deliverables?wid=xxx — 交付任务列表（sidecar 全量透传，本机自托管语义）
-// POST /api/v1/ai/deliverables        — 提交交付任务（转发 nexusloom Admin API 异步入队）
+// GET  /api/v1/ai/deliverables?wid=xxx — 交付任务列表（corps 侧落库记录 + running 态同步）
+// POST /api/v1/ai/deliverables        — 提交交付任务（sidecar 入队 + 立即落库）
 //
-// 认证模式：getUserId → checkRateLimit → getWorkspaceContextV2（进墙）
-// sidecar 不可达 → 502 + 明确文案（与 AI 输出解析降级同一档「可重试」语义）
+// 认证模式：getUserId → checkRateLimit → getWorkspaceContextV2（进墙）→ runWithWorkspace（RLS）
+// 落库形态：提交时以 sidecar task_id 建记录（status=running），列表/详情接口顺带同步状态；
+//           交付账本（sidecar）为准，corps 表存元数据与展示态。
 //
-// 经验来源：2026-11-22 邮箱域接线（新增 route 五门禁全链）
+// 经验来源：2026-11-22 邮箱域接线（新增 route 门禁全链）
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
-import { getWorkspaceContextV2 } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
 import {
   LoomUnavailableError,
+  decodeLoomTitle,
   encodeLoomTitle,
+  getLoomTask,
   listLoomTasks,
   submitLoomTask,
 } from "@/lib/ai/nexusloom";
@@ -30,7 +33,7 @@ const submitSchema = z.object({
     .optional(),
 });
 
-/** sidecar 异常的统一 502 出口（LoomUnavailableError / 网络层失败） */
+/** sidecar 异常的统一 502 出口 */
 function loomDownResponse(req: NextRequest): NextResponse {
   return NextResponse.json(
     { code: 502, message: apiMsg(req, "aiDeliveryUnavailable"), data: null },
@@ -38,7 +41,7 @@ function loomDownResponse(req: NextRequest): NextResponse {
   );
 }
 
-/** 提交交付任务（异步：nexusloom 入队后立即返回任务 id，进度靠轮询） */
+/** 提交交付任务：sidecar 入队 + corps 侧立即落库（running 态，taskId 归属明确） */
 async function postDeliverable(req: NextRequest) {
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -72,8 +75,6 @@ async function postDeliverable(req: NextRequest) {
   try {
     const ctx = await getWorkspaceContextV2(req, body.wid);
     if (!ctx)
-      // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
-      // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
       return NextResponse.json(
         { code: 500, message: apiMsg(req, "internalError"), data: null },
         { status: 500 },
@@ -86,7 +87,6 @@ async function postDeliverable(req: NextRequest) {
       title: loomTitle,
       ...(body.pipeline ? { pipeline: body.pipeline } : {}),
     });
-    // 入队响应的 id 字段名按 Admin API 实测（task_id 或 id 兼容取）
     const taskId = (queued.task_id ?? queued.id ?? null) as string | null;
     if (!taskId) {
       console.error("[POST ai/deliverables] submit returned no task id:", queued);
@@ -95,12 +95,31 @@ async function postDeliverable(req: NextRequest) {
         { status: 502 },
       );
     }
+
+    // 提交即落库：归属（wid/userId）在提交时已知，后续列表/详情按库展示与同步
+    const row = await runWithWorkspace(
+      body.wid,
+      (tx) =>
+        tx.deliverable.create({
+          data: {
+            workspaceId: body.wid,
+            taskId,
+            title: decodeLoomTitle(loomTitle).title,
+            pipeline: body.pipeline ?? "docgen",
+            status: "running",
+            createdBy: ctx.payload.sub,
+          },
+        }),
+      ctx.payload.sub,
+    );
+
     return NextResponse.json({
       code: 200,
       data: {
+        id: row.id,
         taskId,
-        pipeline: body.pipeline ?? "docgen",
-        status: "queued",
+        pipeline: row.pipeline,
+        status: row.status,
       },
       message: apiMsg(req, "ok"),
     });
@@ -114,7 +133,35 @@ async function postDeliverable(req: NextRequest) {
   }
 }
 
-/** 交付任务列表（sidecar 全量透传；本机自托管语义，多租户隔离留第二竖切） */
+/** 单条 running 记录的状态同步（sidecar 详情 → 库内刷新；失败静默下次再试） */
+async function syncRunningTask(
+  wid: string,
+  userId: string,
+  row: { id: string; taskId: string; status: string },
+): Promise<void> {
+  try {
+    const d = await getLoomTask(row.taskId);
+    if (d.status === row.status) return;
+    await runWithWorkspace(
+      wid,
+      (tx) =>
+        tx.deliverable.update({
+          where: { id: row.id },
+          data: {
+            status: d.status,
+            ...(d.finished_at ? { finishedAt: new Date(d.finished_at) } : {}),
+            ...(d.output_path ? { outputPath: d.output_path } : {}),
+            outputSummary: (d.output_content ?? "").slice(0, 2000) || null,
+          },
+        }),
+      userId,
+    );
+  } catch {
+    // sidecar 不可达/任务被清理：保留库内状态，下次轮询再试
+  }
+}
+
+/** 交付任务列表：库内记录为准（多租户隔离），running 态顺带同步 sidecar */
 async function getDeliverables(req: NextRequest) {
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -143,10 +190,57 @@ async function getDeliverables(req: NextRequest) {
       );
     if (!ctx.ok) return authFailure(ctx, req);
 
-    const tasks = await listLoomTasks();
+    let rows = await runWithWorkspace(
+      wid,
+      (tx) =>
+        tx.deliverable.findMany({
+          where: { workspaceId: wid },
+          orderBy: { createdAt: "desc" },
+          take: 100,
+        }),
+      ctx.payload.sub,
+    );
+
+    // running 态同步（限 5 条防放大；轮询节奏由前端 10s 承担）
+    const running = rows.filter((r) => r.status === "running").slice(0, 5);
+    if (running.length > 0) {
+      await Promise.all(running.map((r) => syncRunningTask(wid, ctx.payload.sub, r)));
+      rows = await runWithWorkspace(
+        wid,
+        (tx) =>
+          tx.deliverable.findMany({
+            where: { workspaceId: wid },
+            orderBy: { createdAt: "desc" },
+            take: 100,
+          }),
+        ctx.payload.sub,
+      );
+    }
+
+    // sidecar 全量任务数（供运维对照；不参与展示过滤）
+    let sidecarTotal: number | null = null;
+    try {
+      sidecarTotal = (await listLoomTasks()).length;
+    } catch {
+      // 不可达时忽略
+    }
+
     return NextResponse.json({
       code: 200,
-      data: { items: tasks, total: tasks.length },
+      data: {
+        items: rows.map((r) => ({
+          id: r.id,
+          taskId: r.taskId,
+          title: r.title,
+          pipeline: r.pipeline,
+          status: r.status,
+          createdAt: r.createdAt,
+          finishedAt: r.finishedAt,
+          outputPath: r.outputPath,
+        })),
+        total: rows.length,
+        sidecarTotal,
+      },
       message: apiMsg(req, "ok"),
     });
   } catch (error) {

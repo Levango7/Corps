@@ -171,6 +171,7 @@ model User {
   favorites          Favorite[]         @relation("FavoriteUser")
   // 企业邮箱
   emailAccounts      EmailAccount[]     @relation("EmailAccountUser")
+  deliverables       Deliverable[]      @relation("DeliverableUser")
   // 通知偏好
   notificationPreference NotificationPreference? @relation("NotificationPreferenceUser")
   // 方向 K：远程控制 — 发起 + 接收的会话
@@ -215,6 +216,7 @@ model Workspace {
   messageAttachments MessageAttachment[]
   // IM 升级：独立会话（单聊/群聊）
   conversations      Conversation[]
+  deliverables       Deliverable[]
   subscriptions      Subscription?
   analyticsEvents    AnalyticsEvent[]
   labels             Label[]
@@ -2574,6 +2576,31 @@ model Favorite {
   @@map("favorites")
 }
 // 企业邮箱 — 邮箱账户配置
+/// AI 交付物 —— nexusloom sidecar 交付账本的 corps 侧落库（账本为准，corps 存元数据）。
+/// RLS 策略 p_deliverables_* 只看 workspace_id；taskId 与 sidecar run_id 一一对应。
+model Deliverable {
+  id            String    @id @default(uuid()) @db.Uuid
+  workspaceId   String    @map("workspace_id") @db.Uuid
+  taskId        String    @map("task_id") @db.VarChar(64)
+  title         String    @db.VarChar(300)
+  pipeline      String    @db.VarChar(50)
+  status        String    @default("running") @db.VarChar(20)
+  outputPath    String?   @map("output_path") @db.VarChar(500)
+  outputSummary String?   @map("output_summary") @db.Text
+  sizeBytes     Int?      @map("size_bytes")
+  createdBy     String    @map("created_by") @db.Uuid
+  createdAt     DateTime  @default(now()) @db.Timestamptz @map("created_at")
+  finishedAt    DateTime? @map("finished_at") @db.Timestamptz
+  updatedAt     DateTime  @updatedAt @db.Timestamptz @map("updated_at")
+
+  workspace  Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user       User      @relation("DeliverableUser", fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, taskId])
+  @@index([workspaceId, status])
+  @@map("deliverables")
+}
+
 model EmailAccount {
   id          String   @id @default(uuid()) @db.Uuid
   workspaceId String   @map("workspace_id") @db.Uuid

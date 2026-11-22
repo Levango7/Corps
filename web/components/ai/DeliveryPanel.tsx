@@ -15,18 +15,21 @@ import { useTranslations } from "next-intl";
 import { FileText, Loader2, PackageCheck, RefreshCw, AlertCircle } from "lucide-react";
 import { api } from "@/lib/api";
 
-interface DeliverableSummary {
+/** 库内落库形态（第二竖切起列表/详情按 corps 侧记录展示） */
+interface DeliverableRow {
   id: string;
-  status: string;
+  taskId: string;
+  title: string;
   pipeline: string;
-  created_at: string | null;
-  finished_at: string | null;
-  error: string | null;
+  status: string;
+  createdAt: string | null;
+  finishedAt: string | null;
+  outputPath: string | null;
 }
 
-interface DeliverableDetail extends DeliverableSummary {
+interface DeliverableDetail extends DeliverableRow {
   outputContent: string | null;
-  outputPath: string | null;
+  error: string | null;
 }
 
 const PIPELINES = [
@@ -43,7 +46,7 @@ export default function DeliveryPanel({ wid }: { wid: string }) {
   const [pipeline, setPipeline] = useState<string>("docgen");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
-  const [tasks, setTasks] = useState<DeliverableSummary[] | null>(null);
+  const [tasks, setTasks] = useState<DeliverableRow[] | null>(null);
   const [listError, setListError] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<DeliverableDetail | null>(null);
@@ -52,7 +55,7 @@ export default function DeliveryPanel({ wid }: { wid: string }) {
 
   const loadList = useCallback(async () => {
     try {
-      const data = await api<{ items: DeliverableSummary[]; total: number }>(
+      const data = await api<{ items: DeliverableRow[]; total: number }>(
         `/api/v1/ai/deliverables?wid=${encodeURIComponent(wid)}`,
       );
       setTasks(data.items);
@@ -230,10 +233,13 @@ export default function DeliveryPanel({ wid }: { wid: string }) {
                     {statusLabel(task.status)}
                   </span>
                   <span className="text-[length:var(--text-sm)] text-[var(--fg)] truncate flex-1">
+                    {task.title}
+                  </span>
+                  <span className="text-[length:var(--text-xs)] text-[var(--muted)] shrink-0">
                     {task.pipeline}
                   </span>
                   <span className="text-[length:var(--text-xs)] text-[var(--muted)] shrink-0">
-                    {task.created_at ? new Date(task.created_at).toLocaleString() : ""}
+                    {task.createdAt ? new Date(task.createdAt).toLocaleString() : ""}
                   </span>
                 </button>
                 {expandedId === task.id && (
@@ -263,6 +269,14 @@ export default function DeliveryPanel({ wid }: { wid: string }) {
                           <p className="text-[length:var(--text-xs)] text-[var(--muted)] break-all">
                             {t("outputPath")}: {detail.outputPath}
                           </p>
+                        )}
+                        {detail.status.toLowerCase().includes("done") && detail.outputPath && (
+                          <a
+                            href={`/api/v1/ai/deliverables/${encodeURIComponent(detail.id)}/download?wid=${encodeURIComponent(wid)}`}
+                            className="inline-flex items-center gap-1.5 text-[length:var(--text-sm)] text-[var(--accent)] hover:underline"
+                          >
+                            {t("download")}
+                          </a>
                         )}
                       </>
                     ) : (

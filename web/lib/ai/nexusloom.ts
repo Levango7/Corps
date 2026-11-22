@@ -161,3 +161,26 @@ export async function loomHealthy(): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * 拉取交付物文件流（交付账本 download 端点，attachment）。
+ * 返回上游 Response——调用方透传 body/headers 回浏览器；
+ * 账本行在但文件已不在时上游回 404（语义=没有可下载的东西）。
+ */
+export async function fetchLoomDeliveryDownload(taskId: string): Promise<Response> {
+  assertSafeLoomId(taskId);
+  try {
+    const base = resolveLoomBase();
+    const res = await fetch(`${base}/api/deliveries/${taskId}/download`, {
+      headers: { ...(LOOM_KEY ? { Authorization: `Bearer ${LOOM_KEY}` } : {}) },
+      signal: AbortSignal.timeout(120_000),
+    });
+    if (!res.ok) {
+      throw new LoomUnavailableError(`HTTP ${res.status} download`);
+    }
+    return res;
+  } catch (e) {
+    if (e instanceof LoomUnavailableError) throw e;
+    throw new LoomUnavailableError(String(e));
+  }
+}

@@ -9,7 +9,7 @@ info:
     row for that workspace, then runs all tenant queries inside a transaction with
     app.workspace_id / app.user_id set (RLS binds at engine level in hardened
     deployments — see db/schema.sql).
-    Coverage: this contract declares 296 paths (updated 2026-11-22). The service also
+    Coverage: this contract declares 297 paths (updated 2026-11-23). The service also
     exposes additional routes that are not yet documented here; the authoritative
     gap list and its drift guard live in scripts/check_api_contract.py and
     scripts/api-contract-baseline.txt. New routes must be added here, or explicitly
@@ -10826,6 +10826,30 @@ paths:
           description: Task detail envelope
         '404':
           description: Task not found on the sidecar
+        '502':
+          description: Delivery runtime unavailable
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/deliverables/{id}/download:
+    get:
+      tags: [ai]
+      summary: Download the delivery artifact
+      description: >-
+        Streams the delivered file through the sidecar delivery ledger.
+        Only completed tasks with a produced file artifact can be downloaded;
+        404 when the task has no file or the artifact was purged.
+      operationId: downloadAiDeliverable
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, pattern: '^[A-Za-z0-9_-]{1,128}$' }
+        - $ref: '#/components/parameters/WidQuery'
+      responses:
+        '200':
+          description: File stream (attachment)
+        '404':
+          description: No downloadable artifact
         '502':
           description: Delivery runtime unavailable
         '500':
