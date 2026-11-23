@@ -68,6 +68,7 @@ export function TaskPropertyAside({
           {t("fieldStatus")}
         </div>
         <select
+          aria-label={t("fieldStatus")}
           value={task.status}
           onChange={(e) => onPatch({ status: e.target.value as Status })}
           className={fieldControl}
@@ -86,6 +87,7 @@ export function TaskPropertyAside({
           {t("fieldPriority")}
         </div>
         <select
+          aria-label={t("fieldPriority")}
           value={task.priority}
           onChange={(e) => onPatch({ priority: e.target.value as Priority })}
           className={fieldControl}
@@ -101,6 +103,7 @@ export function TaskPropertyAside({
       <div className="min-w-[130px] flex-1 lg:flex-none lg:w-full">
         <div className={fieldLabel}>{t("assignee")}</div>
         <select
+          aria-label={t("assignee")}
           value={task.assignee?.id ?? ""}
           onChange={(e) => onPatch({ assigneeId: e.target.value || null })}
           className={fieldControl}
@@ -122,6 +125,7 @@ export function TaskPropertyAside({
         </div>
         <input
           type="date"
+          aria-label={t("fieldDueDate")}
           value={task.dueDate ? toLocalDateString(new Date(task.dueDate)) : ""}
           onChange={(e) =>
             onPatch({

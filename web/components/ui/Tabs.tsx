@@ -114,7 +114,7 @@ export function Tabs({ label, baseId, items, value, onChange, className }: TabsP
             // 而且 ARIA tabs 模式本来就要求焦点在 tab 之间移动。
             onKeyDown={onKeyDown}
             className={cn(
-              "relative h-9 px-[var(--space-3)] text-[length:var(--text-sm)] transition-colors",
+              "relative h-11 px-[var(--space-3)] text-[length:var(--text-sm)] transition-colors",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]",
               "disabled:opacity-40 disabled:cursor-not-allowed",
               selected
