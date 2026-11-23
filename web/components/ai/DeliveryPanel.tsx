@@ -25,6 +25,8 @@ interface DeliverableRow {
   createdAt: string | null;
   finishedAt: string | null;
   outputPath: string | null;
+  /** 交付后审批态（null=待审批） */
+  approvalStatus?: string | null;
 }
 
 interface DeliverableDetail extends DeliverableRow {
@@ -51,7 +53,34 @@ export default function DeliveryPanel({ wid }: { wid: string }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<DeliverableDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  /** 交付后审批（通过/驳回；驳回弹原因框）。成功后刷新列表。 */
+  async function handleApproval(row: DeliverableRow, action: "approve" | "reject") {
+    if (approvingId) return;
+    let note: string | undefined;
+    if (action === "reject") {
+      const input = window.prompt(t("approvalNotePrompt"));
+      if (!input || !input.trim()) return;
+      note = input.trim();
+    }
+    setApprovingId(row.id);
+    try {
+      await api<unknown>(
+        `/api/v1/ai/deliverables/${encodeURIComponent(row.id)}/approve?wid=${encodeURIComponent(wid)}`,
+        {
+          method: "POST",
+          body: JSON.stringify({ action, ...(note ? { note } : {}) }),
+        },
+      );
+      await loadList();
+    } catch (e) {
+      setListError(e instanceof Error ? e.message : t("error"));
+    } finally {
+      setApprovingId(null);
+    }
+  }
 
   const loadList = useCallback(async () => {
     try {
@@ -277,6 +306,43 @@ export default function DeliveryPanel({ wid }: { wid: string }) {
                           >
                             {t("download")}
                           </a>
+                        )}
+                        {/* 交付后审批（已完成才有动作；已有结论显示徽标，重复审批服务端 409） */}
+                        {detail.status.toLowerCase().includes("done") && (
+                          <div className="flex items-center gap-2 pt-1">
+                            {detail.approvalStatus ? (
+                              <span
+                                className={`text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] ${
+                                  detail.approvalStatus === "approved"
+                                    ? "text-[var(--success-fg)]"
+                                    : "text-[var(--danger-fg)]"
+                                }`}
+                              >
+                                {detail.approvalStatus === "approved"
+                                  ? t("approved")
+                                  : t("rejected")}
+                              </span>
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleApproval(detail, "approve")}
+                                  disabled={approvingId === detail.id}
+                                  className="px-2.5 py-1 rounded-[var(--radius-md)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--accent-fg)] bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50"
+                                >
+                                  {approvingId === detail.id ? t("approving") : t("approve")}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleApproval(detail, "reject")}
+                                  disabled={approvingId === detail.id}
+                                  className="px-2.5 py-1 rounded-[var(--radius-md)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--danger-fg)] bg-[var(--danger-soft)] hover:opacity-80 disabled:opacity-50"
+                                >
+                                  {t("reject")}
+                                </button>
+                              </>
+                            )}
+                          </div>
                         )}
                       </>
                     ) : (

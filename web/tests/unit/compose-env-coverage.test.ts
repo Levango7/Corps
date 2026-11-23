@@ -64,6 +64,8 @@ const EXEMPT = new Set([
   // nexusloom 交付运行时 sidecar（可选；默认本机回环 Admin API，key 仅私网部署需要）
   "NEXUSLOOM_URL",
   "NEXUSLOOM_API_KEY",
+  // 交付回写共享密钥（可选；未配置时回环部署放行，公网部署必须配置）
+  "DELIVERABLE_WEBHOOK_SECRET",
   // LiveKit 音视频服务配置（未配置时 meetings 路由返回 501）
   "LIVEKIT_TOKEN_TTL",
   // 附件域名白名单（可选，未配置时使用默认值）

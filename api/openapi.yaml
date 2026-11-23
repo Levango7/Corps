@@ -9,7 +9,7 @@ info:
     row for that workspace, then runs all tenant queries inside a transaction with
     app.workspace_id / app.user_id set (RLS binds at engine level in hardened
     deployments — see db/schema.sql).
-    Coverage: this contract declares 297 paths (updated 2026-11-23). The service also
+    Coverage: this contract declares 299 paths (updated 2026-11-23). The service also
     exposes additional routes that are not yet documented here; the authoritative
     gap list and its drift guard live in scripts/check_api_contract.py and
     scripts/api-contract-baseline.txt. New routes must be added here, or explicitly
@@ -10852,6 +10852,54 @@ paths:
           description: No downloadable artifact
         '502':
           description: Delivery runtime unavailable
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/deliverables/webhook:
+    post:
+      tags: [ai]
+      summary: Delivery completion event callback (sidecar webhook)
+      description: >-
+        Receives task.completed events from the nexusloom sidecar. The sidecar
+        only posts to public URLs (its SSRF guard rejects private addresses);
+        self-hosted loopback deployments keep using polling sync. Authenticated
+        via X-Deliverable-Secret shared key (signed-webhook semantics, not a
+        member session). Workspace comes from the subscription URL wid query.
+      operationId: deliverableWebhook
+      responses:
+        '200':
+          description: Updated record envelope
+        '400':
+          description: Invalid body
+        '401':
+          description: Bad shared key
+        '404':
+          description: Task not found in this workspace
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/deliverables/{id}/approve:
+    post:
+      tags: [ai]
+      summary: Post-delivery approval (approve/reject)
+      description: >-
+        Self-contained post-delivery approval layer (user acceptance), distinct
+        from the sidecar DAG approval gate (which only accepts awaiting tasks).
+        Only completed tasks; repeat approval returns 409. Reject requires a note.
+      operationId: approveAiDeliverable
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, pattern: '^[A-Za-z0-9_-]{1,128}$' }
+        - $ref: '#/components/parameters/WidQuery'
+      responses:
+        '200':
+          description: Approval result envelope
+        '400':
+          description: Missing note on reject
+        '404':
+          description: Task not found
+        '409':
+          description: Not finished yet or already decided
         '500':
           $ref: '#/components/responses/InternalError'
   /api/v1/mail/send:

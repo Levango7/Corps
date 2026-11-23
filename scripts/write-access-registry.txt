@@ -32,5 +32,6 @@ POST /api/v1/push/register reason=注册自己的设备 review_by=2027-12-31
 POST /api/v1/push/send reason=全局管理员操作，走PUSH_ADMIN_USER_IDS白名单且未配置即fail-closed（非工作区成员授权） review_by=2027-06-30
 POST /api/v1/push/subscribe reason=订阅自己的设备推送 review_by=2027-12-31
 POST /api/v1/push/unsubscribe reason=退订自己的设备推送 review_by=2027-12-31
+POST /api/v1/ai/deliverables/webhook reason=sidecar交付完成事件回写，以X-Deliverable-Secret共享密钥验签（非成员会话），wid由订阅URL显式携带 review_by=2027-06-30
 POST /api/v1/webhooks/livekit reason=LiveKit-服务回调，以-webhook-鉴权 review_by=2027-09-30
 POST /api/v1/workspaces reason=创建工作区，调用者此时还不是任何工作区成员 review_by=2027-12-31

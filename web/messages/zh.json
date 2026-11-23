@@ -3318,7 +3318,13 @@
       "noOutputYet": "该任务暂无可展示的交付内容",
       "outputPath": "产出路径",
       "error": "加载失败",
-      "download": "下载"
+      "download": "下载",
+      "approve": "通过",
+      "reject": "驳回",
+      "approved": "已通过",
+      "rejected": "已驳回",
+      "approvalNotePrompt": "请填写驳回原因",
+      "approving": "处理中…"
     }
   },
   "doc": {
