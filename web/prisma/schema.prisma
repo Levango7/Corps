@@ -2588,6 +2588,10 @@ model Deliverable {
   outputPath    String?   @map("output_path") @db.VarChar(500)
   outputSummary String?   @map("output_summary") @db.Text
   sizeBytes     Int?      @map("size_bytes")
+  approvalStatus String?  @map("approval_status") @db.VarChar(20)
+  approvalNote  String?   @map("approval_note") @db.Text
+  approvedBy    String?   @map("approved_by") @db.Uuid
+  approvedAt    DateTime? @map("approved_at") @db.Timestamptz
   createdBy     String    @map("created_by") @db.Uuid
   createdAt     DateTime  @default(now()) @db.Timestamptz @map("created_at")
   finishedAt    DateTime? @map("finished_at") @db.Timestamptz

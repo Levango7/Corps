@@ -15,6 +15,7 @@ PATCH /api/v1/users/me reason=改自己的账号资料 review_by=2027-12-31
 POST /api/documents/share/{token}/verify reason=以分享令牌授权，非成员会话 review_by=2027-09-30
 POST /api/v1/ai/chat reason=会话型AI不写业务对象；usage经runWithWorkspace记入aiUsageLog；wid取自JWT未校验成员角色 review_by=2027-03-31
 POST /api/v1/ai/completion reason=用户级文本生成不写业务对象；usage经runWithWorkspace记入aiUsageLog；wid取自JWT未校验成员角色 review_by=2027-03-31
+POST /api/v1/ai/deliverables/webhook reason=sidecar交付完成事件回写，以X-Deliverable-Secret共享密钥验签（非成员会话），wid由订阅URL显式携带 review_by=2027-06-30
 POST /api/v1/ai/format reason=用户级文本格式化不写业务对象；usage经runWithWorkspace记入aiUsageLog；wid取自JWT未校验成员角色 review_by=2027-03-31
 POST /api/v1/ai/summarize reason=用户级摘要不写业务对象；usage经runWithWorkspace记入aiUsageLog；wid取自JWT未校验成员角色 review_by=2027-03-31
 POST /api/v1/ai/task-breakdown reason=仅返回建议不落位；落位端点v1/workspaces/{wid}/tasks与v1/ai/tools/execute均已getWorkspaceContextV2 review_by=2027-03-31

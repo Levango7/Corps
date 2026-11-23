@@ -3318,7 +3318,13 @@
       "noOutputYet": "No deliverable content to show yet",
       "outputPath": "Output path",
       "error": "Failed to load",
-      "download": "Download"
+      "download": "Download",
+      "approve": "Approve",
+      "reject": "Reject",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "approvalNotePrompt": "Reason for rejection",
+      "approving": "Working…"
     }
   },
   "doc": {

@@ -286,6 +286,20 @@ export const API_MESSAGES = {
     en: "No downloadable artifact for this task (only the render pipeline produces files).",
   },
 
+  /* ── 交付后审批（2026-11-23 自含审批层）── */
+  aiApprovalNoteRequired: {
+    zh: "驳回时请填写原因",
+    en: "Please provide a reason when rejecting.",
+  },
+  aiApprovalNotDone: {
+    zh: "该任务尚未完成，暂不能审批",
+    en: "This task has not finished yet and cannot be approved.",
+  },
+  aiApprovalAlready: {
+    zh: "该任务已有审批结论，不能重复审批",
+    en: "This task already has an approval decision and cannot be approved again.",
+  },
+
   /* ── 邮箱验证 ── */
   emailNotVerified: {
     zh: "邮箱尚未验证：请先点击注册邮件中的验证链接，再登录",
