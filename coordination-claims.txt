@@ -5,3 +5,4 @@
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
 F:/tmp/corps-loom-daily | feat/loom-daily-report | web/lib/ai/loom-runtime.ts,web/app/api/v1/ai/daily-report/route.ts,web/tests/ai/loom-runtime.test.ts | zcode | 2026-11-22 16:30 | 2026-11-22 20:30 | nexusloom sidecar 日报运行时 adapter 试点
+F:/Nexus/corps-wt-actions | feat/corps-a11y-density-ratchet | web/e2e/a11y-core.spec.ts,web/tests/unit/design-tokens-theme.test.ts,web/tests/unit/ui-primitives.test.tsx,web/components/ui/Input.tsx,web/components/ui/Select.tsx,web/components/ui/Tabs.tsx,web/tests/a11y-axe-baseline.json | qoder | 2026-11-23T23:03Z | 2026-11-24T03:03Z | #45 窄批：任务详情 axe + Tailwind 生成类 + 44px 触摸目标棘轮
