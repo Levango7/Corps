@@ -10,7 +10,7 @@ import {
   formatBgLayer,
   type ViolationDetail,
 } from "./a11y-axe-keys";
-import { registerAndLogin, uniqueEmail } from "./helpers";
+import { createTask, registerAndLogin, uniqueEmail } from "./helpers";
 
 /**
  * axe 真实浏览器 a11y 基线（WCAG 2.1 A/AA）。
@@ -117,9 +117,11 @@ test.describe("axe 无障碍基线（WCAG 2.1 A/AA）", () => {
 
     const keys: string[] = [];
     const details: Record<string, ViolationDetail> = {};
+    const scannedRoutes: string[] = [];
 
     /** 扫一次，同时产出基线键与现场数据（两件事共用同一次 analyze，避免两次渲染不一致）。 */
     async function scanAs(routeKey: string): Promise<void> {
+      scannedRoutes.push(routeKey);
       const result = await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze();
       keys.push(...collectKeys(routeKey, result.violations));
       const fresh = collectDetails(routeKey, result.violations);
@@ -146,6 +148,20 @@ test.describe("axe 无障碍基线（WCAG 2.1 A/AA）", () => {
 
     // 登录后逐页扫描。用固定测试账号注册，避免依赖别人种的数据。
     const wid = await registerAndLogin(page, uniqueEmail("e2e-a11y"), "E2E无障碍工作区");
+
+    const taskTitle = `axe-task-${Date.now()}`;
+    await createTask(page, taskTitle);
+    const taskCard = page
+      .locator('div[draggable="true"]')
+      .filter({ hasText: taskTitle })
+      .filter({ visible: true })
+      .first();
+    await taskCard.click();
+    await page.waitForURL(/\/task\//, { timeout: 10_000 });
+    await expect(page.getByRole("button", { name: "记一条" })).toBeVisible({ timeout: 30_000 });
+    await settle(page);
+    await scanAs("/w/:wid/task/:id");
+
     for (const target of AUTHED_PAGES) {
       const url = target.path(wid);
       const nav = await page.goto(url, { waitUntil: "domcontentloaded" });
@@ -162,6 +178,8 @@ test.describe("axe 无障碍基线（WCAG 2.1 A/AA）", () => {
       );
       await scanAs(target.key);
     }
+
+    expect(scannedRoutes, "任务详情页必须进入 axe 真实浏览器扫描").toContain("/w/:wid/task/:id");
 
     const current = [...new Set(keys)].sort();
 

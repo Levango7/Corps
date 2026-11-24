@@ -56,6 +56,13 @@ describe("Button", () => {
     expect(screen.getByRole("button", { name: "保存" }).className).toContain("h-11");
   });
 
+  it("sm 尺寸用伪元素把 32px 视觉高度扩到 44px 命中区", () => {
+    render(<Button size="sm">紧凑保存</Button>);
+    const className = screen.getByRole("button", { name: "紧凑保存" }).className;
+    expect(className).toContain("h-8");
+    expect(className).toContain("after:-inset-y-1.5");
+  });
+
   it("loading 时 aria-busy 且不可点（防重复提交）", () => {
     render(<Button loading>保存</Button>);
     const btn = screen.getByRole("button", { name: "保存" });
@@ -83,6 +90,11 @@ describe("Input / Textarea / Select", () => {
   it("Input 的 label 与控件关联（getByLabelText 能命中即证明 for/id 接对）", () => {
     render(<Input label="邮箱" />);
     expect(screen.getByLabelText("邮箱")).toBeInTheDocument();
+  });
+
+  it("Input 默认命中 44px 触摸目标", () => {
+    render(<Input label="邮箱" />);
+    expect(screen.getByLabelText("邮箱").className).toContain("h-11");
   });
 
   it("Input 有错误时 aria-invalid + aria-describedby 指向错误文案", () => {
@@ -126,6 +138,19 @@ describe("Input / Textarea / Select", () => {
     expect(sel.tagName).toBe("SELECT");
     expect(sel).toHaveValue("high");
     expect(screen.getByRole("option", { name: "低" })).toBeInTheDocument();
+  });
+
+  it("Select 默认命中 44px 触摸目标", () => {
+    render(
+      <Select
+        label="优先级"
+        options={[
+          { value: "high", label: "高" },
+          { value: "low", label: "低" },
+        ]}
+      />,
+    );
+    expect(screen.getByLabelText("优先级").className).toContain("h-11");
   });
 });
 
@@ -213,6 +238,13 @@ function TabsHarness() {
 }
 
 describe("Tabs", () => {
+  it("每个 tab 默认命中 44px 触摸目标", () => {
+    render(<TabsHarness />);
+    for (const tab of screen.getAllByRole("tab")) {
+      expect(tab.className).toContain("h-11");
+    }
+  });
+
   it("角色齐备且只有选中项 tabIndex=0（roving tabindex）", () => {
     render(<TabsHarness />);
     expect(screen.getByRole("tablist", { name: "视图切换" })).toBeInTheDocument();

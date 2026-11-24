@@ -53,6 +53,7 @@ export function TaskDetailHeader({
       <div className="flex items-start gap-[var(--space-2)]">
         <textarea
           ref={titleRef}
+          aria-label={t("fieldTitle")}
           value={titleDraft}
           onChange={(e) => {
             setTitleDraft(e.target.value);

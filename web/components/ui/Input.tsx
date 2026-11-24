@@ -48,7 +48,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         aria-required={required || undefined}
         aria-invalid={error ? true : undefined}
         aria-describedby={error || hint ? messageId : undefined}
-        className={cn(FIELD_CONTROL_CLASS, "h-9 border-[var(--border)]")}
+        className={cn(FIELD_CONTROL_CLASS, "h-11 border-[var(--border)]")}
         {...rest}
       />
     </FieldFrame>

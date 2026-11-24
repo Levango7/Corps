@@ -194,8 +194,8 @@ components/task/DecisionHistoryDialog.tsx  jsx-a11y/no-noninteractive-element-in
 components/task/DecisionHistoryDialog.tsx  jsx-a11y/no-static-element-interactions  1
 components/task/TaskComments.tsx  jsx-a11y/control-has-associated-label  1
 components/task/TaskDecisions.tsx  jsx-a11y/control-has-associated-label  1
-components/task/TaskDetailHeader.tsx  jsx-a11y/control-has-associated-label  2
-components/task/TaskPropertyAside.tsx  jsx-a11y/control-has-associated-label  3
+components/task/TaskDetailHeader.tsx  jsx-a11y/control-has-associated-label  1
+components/task/TaskPropertyAside.tsx  jsx-a11y/control-has-associated-label  2
 components/TaskFilterBar.tsx  jsx-a11y/control-has-associated-label  1
 components/template/TemplateApplyDialog.tsx  jsx-a11y/click-events-have-key-events  1
 components/template/TemplateApplyDialog.tsx  jsx-a11y/no-noninteractive-element-interactions  1
