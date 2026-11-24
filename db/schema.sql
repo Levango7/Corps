@@ -6120,9 +6120,10 @@ ALTER ROLE corps_app WITH PASSWORD :'app_password';
 GRANT USAGE ON SCHEMA public TO corps_app;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO corps_app;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO corps_app;
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+-- 默认权限跟随执行迁移的属主角色（本地 postgres / Neon neondb_owner）。
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
   GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO corps_app;
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
   GRANT USAGE, SELECT ON SEQUENCES TO corps_app;
 
 -- ─── 3. 启用并 FORCE RLS（FORCE：表属主同样受策略约束）─────────────────────
@@ -6154,7 +6155,9 @@ BEGIN
     -- ADR-010 G4 收编：share_access_logs（workspace_id 写入时反查落列）
     'share_access_logs',
     -- P1 公文 A1（任务 #83）：四对象，全 workspace_id 谓词
-    'gov_docs','gov_doc_opinions','gov_doc_exchanges','gov_doc_attachments'
+    'gov_docs','gov_doc_opinions','gov_doc_exchanges','gov_doc_attachments',
+    -- AI 交付域（nexusloom sidecar 交付账本落库；workspace_id 谓词）
+    'deliverables'
   ] LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('ALTER TABLE %I FORCE  ROW LEVEL SECURITY', t);
@@ -6550,6 +6553,8 @@ CREATE POLICY p_temporary_grants_delete ON temporary_grants FOR DELETE
 -- ── push_subscriptions（用户级，按 user_id 隔离）──────────────────────────
 ALTER TABLE push_subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE push_subscriptions FORCE ROW LEVEL SECURITY;
+ALTER TABLE deliverables ENABLE ROW LEVEL SECURITY;
+ALTER TABLE deliverables FORCE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS p_push_subscriptions_select ON push_subscriptions;
 CREATE POLICY p_push_subscriptions_select ON push_subscriptions FOR SELECT
@@ -7117,6 +7122,21 @@ CREATE POLICY p_email_accounts_update ON email_accounts FOR UPDATE
   WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
 DROP POLICY IF EXISTS p_email_accounts_delete ON email_accounts;
 CREATE POLICY p_email_accounts_delete ON email_accounts FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── deliverables ──
+DROP POLICY IF EXISTS p_deliverables_select ON deliverables;
+CREATE POLICY p_deliverables_select ON deliverables FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_deliverables_insert ON deliverables;
+CREATE POLICY p_deliverables_insert ON deliverables FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_deliverables_update ON deliverables;
+CREATE POLICY p_deliverables_update ON deliverables FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_deliverables_delete ON deliverables;
+CREATE POLICY p_deliverables_delete ON deliverables FOR DELETE
   USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
 
 -- ── favorites ──
