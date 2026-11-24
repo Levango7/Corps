@@ -121,6 +121,10 @@ jobs:
           # auto-update (it writes `{}`) while leaving only one set fails the build.
           CORPS_UPDATER_ENDPOINT: ${{ vars.CORPS_UPDATER_ENDPOINT }}
           CORPS_UPDATER_PUBKEY: ${{ vars.CORPS_UPDATER_PUBKEY }}
+          # Shell mode: embedded (default) starts the local Next.js sidecar;
+          # remote loads CORPS_WEB_URL in the WebView and never starts the sidecar.
+          CORPS_SHELL_MODE: ${{ vars.CORPS_SHELL_MODE }}
+          CORPS_WEB_URL: ${{ vars.CORPS_WEB_URL }}
 
       # Upload native installers per platform.
       # Paths vary by OS — if-no-files-found: warn avoids failures on non-applicable formats.
