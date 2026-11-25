@@ -33,8 +33,11 @@ function resolveLoomBase(): string {
 }
 
 const LOOM_KEY = process.env.NEXUSLOOM_API_KEY ?? "";
-/** sidecar 健康时响应亚秒级；提交是长任务入队，给足超时 */
+/** sidecar 健康时读接口亚秒级；给慢网络留 15s。 */
 const TIMEOUT_MS = 15_000;
+/** 提交要解析完整 DAG/片段，冷启动实测可超过 15s；过短会出现上游已入队、
+ * corps 却 502 的假失败。提交单独放宽到 60s（仍是有界等待）。 */
+const SUBMIT_TIMEOUT_MS = 60_000;
 
 /** 任务 id 白名单（Admin API 生成的受限字符集；阻断路径拼接注入） */
 const SAFE_ID_RE = /^[A-Za-z0-9_-]{1,128}$/;
@@ -84,7 +87,7 @@ async function loomFetch(path: string, init?: RequestInit): Promise<unknown> {
   const res = await fetch(`${base}${path}`, {
     ...init,
     headers: { ...loomHeaders(), ...(init?.headers ?? {}) },
-    signal: AbortSignal.timeout(TIMEOUT_MS),
+    signal: init?.signal ?? AbortSignal.timeout(TIMEOUT_MS),
   });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
@@ -102,10 +105,19 @@ export interface LoomTaskSummary {
   error: string | null;
 }
 
+export interface LoomAwaitingApproval {
+  nodes?: string[];
+  messages?: Record<string, string>;
+  pipeline?: string;
+}
+
 export interface LoomTaskDetail extends LoomTaskSummary {
   result: Record<string, unknown>;
   output_path: string | null;
   output_content: string | null;
+  /** 审批闸门等待态（docgen-review 等人审流水线跑到 approval 节点时非空） */
+  awaiting_approval?: LoomAwaitingApproval | null;
+  approvals?: Array<Record<string, unknown>>;
 }
 
 /** 提交交付任务。返回 nexusloom 的入队响应（含任务 id）。 */
@@ -123,6 +135,7 @@ export async function submitLoomTask(body: {
         ...(body.pipeline ? { pipeline: body.pipeline } : {}),
         wait: false,
       }),
+      signal: AbortSignal.timeout(SUBMIT_TIMEOUT_MS),
     })) as Record<string, unknown>;
   } catch (e) {
     if (e instanceof LoomUnavailableError) throw e;
@@ -146,6 +159,37 @@ export async function getLoomTask(id: string): Promise<LoomTaskDetail> {
   assertSafeLoomId(id);
   try {
     return (await loomFetch(`/tasks/${id}`)) as LoomTaskDetail;
+  } catch (e) {
+    if (e instanceof LoomUnavailableError) throw e;
+    throw new LoomUnavailableError(String(e));
+  }
+}
+
+/**
+ * 放行审批闸门（sidecar 的 approval 节点）。
+ * 只对处于 awaiting_approval 的任务有效；非等待态上游回 409，转成 LoomUnavailableError。
+ */
+export async function approveLoomTask(id: string, note = ""): Promise<Record<string, unknown>> {
+  assertSafeLoomId(id);
+  try {
+    return (await loomFetch(`/tasks/${id}/approve`, {
+      method: "POST",
+      body: JSON.stringify({ note }),
+    })) as Record<string, unknown>;
+  } catch (e) {
+    if (e instanceof LoomUnavailableError) throw e;
+    throw new LoomUnavailableError(String(e));
+  }
+}
+
+/** 驳回审批闸门（任务终止，原因进入 sidecar 审计与任务错误）。 */
+export async function rejectLoomTask(id: string, reason = ""): Promise<Record<string, unknown>> {
+  assertSafeLoomId(id);
+  try {
+    return (await loomFetch(`/tasks/${id}/reject`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    })) as Record<string, unknown>;
   } catch (e) {
     if (e instanceof LoomUnavailableError) throw e;
     throw new LoomUnavailableError(String(e));
