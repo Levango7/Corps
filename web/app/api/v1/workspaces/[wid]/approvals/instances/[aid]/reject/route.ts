@@ -114,7 +114,12 @@ async function postApprovalsInstancesRejectByAid(
         }
 
         // 交付物审批联动：交付验收/人审闸门的驳回终态回写 Deliverable.approvalStatus
-        const linked = await syncDeliverableApproval(tx, updated, ctx.payload.sub, validated.comment);
+        const linked = await syncDeliverableApproval(
+          tx,
+          updated,
+          ctx.payload.sub,
+          validated.comment,
+        );
 
         return { kind: "ok" as const, data: updated, gateTaskId: linked.gateTaskId };
       },

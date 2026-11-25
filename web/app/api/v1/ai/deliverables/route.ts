@@ -21,10 +21,7 @@ import {
   listLoomTasks,
   submitLoomTask,
 } from "@/lib/ai/nexusloom";
-import {
-  isTerminalDeliverableStatus,
-  syncDeliverableFromLoom,
-} from "@/lib/ai/deliverable-sync";
+import { isTerminalDeliverableStatus, syncDeliverableFromLoom } from "@/lib/ai/deliverable-sync";
 import { withRed } from "@/lib/red-metrics";
 
 const submitSchema = z.object({

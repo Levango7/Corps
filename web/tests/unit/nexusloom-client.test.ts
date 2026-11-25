@@ -83,9 +83,11 @@ describe("nexusloom 客户端", () => {
       }),
     );
     const mod = await import("@/lib/ai/nexusloom");
-    await expect(mod.submitLoomTask({ query: "test", pipeline: "docgen-review" })).resolves.toEqual({
-      task_id: "task-1",
-    });
+    await expect(mod.submitLoomTask({ query: "test", pipeline: "docgen-review" })).resolves.toEqual(
+      {
+        task_id: "task-1",
+      },
+    );
     expect(timeoutSpy).toHaveBeenCalledWith(60_000);
     const init = mocks.fetch.mock.calls[0]?.[1] as RequestInit;
     expect(init.signal).toBeInstanceOf(AbortSignal);

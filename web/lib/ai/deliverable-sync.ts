@@ -47,9 +47,7 @@ export interface DeliverableSyncResult {
 
 /** 终态（不再轮询 sidecar） */
 export function isTerminalDeliverableStatus(status: string): boolean {
-  return ["done", "completed", "failed", "error", "cancelled"].includes(
-    status.toLowerCase(),
-  );
+  return ["done", "completed", "failed", "error", "cancelled"].includes(status.toLowerCase());
 }
 
 /** 把审批终态转成 sidecar 决策；失败只记录，下一次轮询会重试 */
@@ -86,8 +84,7 @@ export async function syncDeliverableFromLoom(args: {
   const detail = await getLoomTask(row.taskId);
   const awaiting = detail.awaiting_approval ?? null;
   const gatePending =
-    Boolean(awaiting) ||
-    (detail.status === "paused" && Boolean(row.approvalInstanceId));
+    Boolean(awaiting) || (detail.status === "paused" && Boolean(row.approvalInstanceId));
   const displayStatus = gatePending ? "awaiting_approval" : detail.status;
 
   const outcome = await runWithWorkspace(
@@ -117,8 +114,7 @@ export async function syncDeliverableFromLoom(args: {
 
       const finishedAt = detail.finished_at ? new Date(detail.finished_at) : null;
       const outputPath = detail.output_path ?? row.outputPath;
-      const outputSummary =
-        (detail.output_content ?? "").slice(0, 2000) || row.outputSummary;
+      const outputSummary = (detail.output_content ?? "").slice(0, 2000) || row.outputSummary;
 
       await tx.deliverable.update({
         where: { id: row.id },

@@ -169,10 +169,7 @@ export async function getLoomTask(id: string): Promise<LoomTaskDetail> {
  * 放行审批闸门（sidecar 的 approval 节点）。
  * 只对处于 awaiting_approval 的任务有效；非等待态上游回 409，转成 LoomUnavailableError。
  */
-export async function approveLoomTask(
-  id: string,
-  note = "",
-): Promise<Record<string, unknown>> {
+export async function approveLoomTask(id: string, note = ""): Promise<Record<string, unknown>> {
   assertSafeLoomId(id);
   try {
     return (await loomFetch(`/tasks/${id}/approve`, {
@@ -186,10 +183,7 @@ export async function approveLoomTask(
 }
 
 /** 驳回审批闸门（任务终止，原因进入 sidecar 审计与任务错误）。 */
-export async function rejectLoomTask(
-  id: string,
-  reason = "",
-): Promise<Record<string, unknown>> {
+export async function rejectLoomTask(id: string, reason = ""): Promise<Record<string, unknown>> {
   assertSafeLoomId(id);
   try {
     return (await loomFetch(`/tasks/${id}/reject`, {

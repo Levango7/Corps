@@ -352,49 +352,49 @@ export default function DeliveryPanel({ wid }: { wid: string }) {
                         {/* 交付后审批（已完成才有动作；已有结论显示徽标，重复审批服务端 409） */}
                         {detail.status.toLowerCase().includes("done") &&
                           (detail.approvalStatus || !detail.approvalInstanceId) && (
-                          <div className="flex items-center gap-2 pt-1">
-                            {detail.approvalStatus ? (
-                              <span
-                                className={`text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] ${
-                                  detail.approvalStatus === "approved"
-                                    ? "text-[var(--success-fg)]"
-                                    : "text-[var(--danger-fg)]"
-                                }`}
-                              >
-                                {detail.approvalStatus === "approved"
-                                  ? t("approved")
-                                  : t("rejected")}
-                              </span>
-                            ) : (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => handleApproval(detail, "approve")}
-                                  disabled={approvingId === detail.id}
-                                  className="px-2.5 py-1 rounded-[var(--radius-md)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--accent-fg)] bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50"
+                            <div className="flex items-center gap-2 pt-1">
+                              {detail.approvalStatus ? (
+                                <span
+                                  className={`text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] ${
+                                    detail.approvalStatus === "approved"
+                                      ? "text-[var(--success-fg)]"
+                                      : "text-[var(--danger-fg)]"
+                                  }`}
                                 >
-                                  {approvingId === detail.id ? t("approving") : t("approve")}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleApproval(detail, "reject")}
-                                  disabled={approvingId === detail.id}
-                                  className="px-2.5 py-1 rounded-[var(--radius-md)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--danger-fg)] bg-[var(--danger-soft)] hover:opacity-80 disabled:opacity-50"
-                                >
-                                  {t("reject")}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleSubmitApproval(detail)}
-                                  disabled={approvingId === detail.id}
-                                  className="px-2.5 py-1 rounded-[var(--radius-md)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--accent)] bg-[var(--surface-2)] border border-[var(--border-soft)] hover:opacity-80 disabled:opacity-50"
-                                >
-                                  {t("submitApproval")}
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        )}
+                                  {detail.approvalStatus === "approved"
+                                    ? t("approved")
+                                    : t("rejected")}
+                                </span>
+                              ) : (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleApproval(detail, "approve")}
+                                    disabled={approvingId === detail.id}
+                                    className="px-2.5 py-1 rounded-[var(--radius-md)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--accent-fg)] bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50"
+                                  >
+                                    {approvingId === detail.id ? t("approving") : t("approve")}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleApproval(detail, "reject")}
+                                    disabled={approvingId === detail.id}
+                                    className="px-2.5 py-1 rounded-[var(--radius-md)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--danger-fg)] bg-[var(--danger-soft)] hover:opacity-80 disabled:opacity-50"
+                                  >
+                                    {t("reject")}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSubmitApproval(detail)}
+                                    disabled={approvingId === detail.id}
+                                    className="px-2.5 py-1 rounded-[var(--radius-md)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--accent)] bg-[var(--surface-2)] border border-[var(--border-soft)] hover:opacity-80 disabled:opacity-50"
+                                  >
+                                    {t("submitApproval")}
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          )}
                       </>
                     ) : (
                       <p className="text-[length:var(--text-sm)] text-[var(--muted)]">

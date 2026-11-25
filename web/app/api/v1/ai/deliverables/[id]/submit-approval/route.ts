@@ -147,7 +147,11 @@ async function postSubmitApproval(
     }
     if (result.kind === "already") {
       return NextResponse.json(
-        { code: 409, message: apiMsg(req, "aiApprovalAlready"), data: { instanceId: result.instanceId } },
+        {
+          code: 409,
+          message: apiMsg(req, "aiApprovalAlready"),
+          data: { instanceId: result.instanceId },
+        },
         { status: 409 },
       );
     }
