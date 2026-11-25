@@ -14,7 +14,10 @@ pub const APP_IDENTIFIER: &str = "com.corps.desktop";
 /// 是否需要启动本地 Next.js sidecar。
 /// remote 模式由构建期把窗口 URL 指向 CORPS_WEB_URL，不启动本地服务。
 pub fn starts_sidecar(shell_mode: Option<&str>) -> bool {
-    !matches!(shell_mode, Some("remote"))
+    !matches!(
+        shell_mode.map(|mode| mode.trim_matches(|c: char| c.is_whitespace() || c == '\u{feff}')),
+        Some("remote")
+    )
 }
 
 /// 移动端入口：基础 Tauri 应用（无 sidecar/托盘/快捷键）

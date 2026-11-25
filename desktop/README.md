@@ -138,7 +138,7 @@ pnpm build
 CORPS_SHELL_MODE=remote CORPS_WEB_URL='https://<你控制的部署地址>' pnpm build
 ```
 
-remote 模式下 updater 强制关闭，产物按手动分发处理；CI 也通过 `CORPS_SHELL_MODE` / `CORPS_WEB_URL` 仓库变量控制。
+remote 模式保留基础窗口尺寸与标题，使用 URL 作为 `frontendDist`，不运行 Next.js 构建、不打包 standalone；updater 强制关闭，产物按手动分发处理。GitHub Actions 手动构建可传 `corps_shell_mode` / `corps_web_url`，tag 构建读取桌面专用仓库变量 `CORPS_DESKTOP_SHELL_MODE` / `CORPS_DESKTOP_WEB_URL`，与移动端的 `CORPS_WEB_URL` 隔离。
 
 ### 生成应用图标
 
@@ -158,7 +158,7 @@ pnpm icon path/to/icon.png
 | 变量 | 必填 | 说明 |
 |------|------|------|
 | `CORPS_SHELL_MODE` | 否 | `embedded`（默认）或 `remote` |
-| `CORPS_WEB_URL` | remote 必填 | WebView 加载地址；只接受 https，或 `localhost`/`127.0.0.1` 的 http |
+| `CORPS_WEB_URL` | remote 必填 | WebView 加载地址；只接受 https，或 `localhost`/`127.0.0.1`/`[::1]` 的 http；禁止 userinfo |
 | `CORPS_UPDATER_ENDPOINT` | embedded 可选 | updater 清单地址，必须与公钥成对 |
 | `CORPS_UPDATER_PUBKEY` | embedded 可选 | Tauri 更新公钥，必须与端点成对 |
 

@@ -1,10 +1,11 @@
 /**
- * @param {{ mode?: "embedded" | "remote"; webUrl?: string; updaterEndpoint?: string; updaterPubkey?: string }} input
+ * @param {{ mode?: "embedded" | "remote"; webUrl?: string; baseWindow?: Record<string, unknown>; updaterEndpoint?: string; updaterPubkey?: string }} input
  * @returns {Record<string, unknown>}
  */
 export function buildReleaseConfig({
   mode,
   webUrl,
+  baseWindow,
   updaterEndpoint,
   updaterPubkey,
 }) {
@@ -48,19 +49,33 @@ export function buildReleaseConfig({
   } catch {
     throw new Error("REMOTE_WEB_URL_INVALID");
   }
-  const isLoopback = ["localhost", "127.0.0.1", "::1"].includes(parsed.hostname);
-  if (parsed.protocol === "http:" && !isLoopback) {
-    throw new Error("REMOTE_WEB_URL_NOT_HTTPS");
-  }
   if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
     throw new Error("REMOTE_WEB_URL_INVALID");
   }
-  if (hasEndpoint || hasPubkey) {
-    throw new Error("REMOTE_UPDATER_NOT_ALLOWED");
+  if (/^https?:\/\/[^/?#]*@/i.test(webUrl)) {
+    throw new Error("REMOTE_WEB_URL_USERINFO_NOT_ALLOWED");
+  }
+
+  const hostname = parsed.hostname.replace(/^\[|\]$/g, "");
+  const isLoopback = ["localhost", "127.0.0.1", "::1"].includes(hostname);
+  if (parsed.protocol === "http:" && !isLoopback) {
+    throw new Error("REMOTE_WEB_URL_NOT_HTTPS");
+  }
+  if (
+    !baseWindow ||
+    typeof baseWindow !== "object" ||
+    Array.isArray(baseWindow)
+  ) {
+    throw new Error("REMOTE_BASE_WINDOW_MISSING");
   }
 
   return {
-    app: { windows: [{ url: webUrl }] },
+    app: { windows: [{ ...baseWindow, url: webUrl }] },
+    build: {
+      frontendDist: webUrl,
+      beforeBuildCommand: null,
+    },
+    bundle: { resources: [] },
     plugins: { updater: { endpoints: [], pubkey: "" } },
   };
 }
