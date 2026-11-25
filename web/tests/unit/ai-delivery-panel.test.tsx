@@ -128,4 +128,74 @@ describe("DeliveryPanel", () => {
     fireEvent.click(screen.getByText("ai.delivery.statusDone"));
     await waitFor(() => expect(screen.getByText("# 交付正文")).toBeInTheDocument());
   });
+
+  it("待审详情：查看审批链接指向真实 /approvals/<aid> 详情路由", async () => {
+    const instanceId = "63acadde-aaaa-4bbb-8ccc-ddddeeeeffff";
+    const task = {
+      id: "task-pending",
+      title: "待审交付",
+      taskId: "loom-pending",
+      status: "awaiting_approval",
+      pipeline: "docgen-review",
+      createdAt: null,
+      finishedAt: null,
+      outputPath: null,
+      approvalInstanceId: instanceId,
+      approvalStatus: null,
+    };
+    mocks.api.mockImplementation((path: string) => {
+      if (path.includes("/api/v1/ai/deliverables/task-pending")) {
+        return Promise.resolve({
+          ...task,
+          outputContent: null,
+          error: null,
+          awaitingApproval: { nodes: ["approval_gate"] },
+        });
+      }
+      return Promise.resolve({ items: [task], total: 1 });
+    });
+    render(<DeliveryPanel wid={WID} />);
+    await waitFor(() =>
+      expect(screen.getByText("ai.delivery.statusAwaitingApproval")).toBeInTheDocument(),
+    );
+    fireEvent.click(screen.getByText("ai.delivery.statusAwaitingApproval"));
+    const link = await screen.findByRole("link", { name: "ai.delivery.approvalInstanceLink" });
+    expect(link).toHaveAttribute("href", `/w/${WID}/approvals/${instanceId}`);
+    expect(link).not.toHaveAttribute("href", expect.stringContaining("/approvals/instances/"));
+  });
+
+  it("驳回终态：cancelled 显示已取消，不再误报生成中", async () => {
+    const task = {
+      id: "task-cancelled",
+      title: "被驳回交付",
+      taskId: "loom-cancelled",
+      status: "cancelled",
+      pipeline: "docgen-review",
+      createdAt: null,
+      finishedAt: null,
+      outputPath: null,
+      approvalInstanceId: "63acadde-aaaa-4bbb-8ccc-ddddeeeeffff",
+      approvalStatus: "rejected",
+    };
+    mocks.api.mockImplementation((path: string) => {
+      if (path.includes("/api/v1/ai/deliverables/task-cancelled")) {
+        return Promise.resolve({
+          ...task,
+          outputContent: null,
+          error: null,
+          approvalNote: "真实浏览器驳回验收",
+        });
+      }
+      return Promise.resolve({ items: [task], total: 1 });
+    });
+    render(<DeliveryPanel wid={WID} />);
+    await waitFor(() =>
+      expect(screen.getByText("ai.delivery.statusCancelled")).toBeInTheDocument(),
+    );
+    expect(screen.queryByText("ai.delivery.statusRunning")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText("ai.delivery.statusCancelled"));
+    await waitFor(() =>
+      expect(screen.getByText("ai.delivery.approvalNote: 真实浏览器驳回验收")).toBeInTheDocument(),
+    );
+  });
 });
