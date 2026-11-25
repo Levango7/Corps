@@ -10,7 +10,12 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
-import { LoomUnavailableError, getLoomTask } from "@/lib/ai/nexusloom";
+import { LoomUnavailableError } from "@/lib/ai/nexusloom";
+import {
+  isTerminalDeliverableStatus,
+  syncDeliverableFromLoom,
+  type DeliverableSyncResult,
+} from "@/lib/ai/deliverable-sync";
 import { withRed } from "@/lib/red-metrics";
 
 /** sidecar 明确 404 → 透传；其余不可达 → 502 */
@@ -71,32 +76,16 @@ async function getDeliverableById(
       );
     }
 
-    // 未终态时同步 sidecar（终态记录不再打 sidecar）
-    let sidecar: Awaited<ReturnType<typeof getLoomTask>> | null = null;
-    if (row.status === "running") {
+    // 未终态时同步 sidecar（终态记录不再打 sidecar）。审批闸门态由共享
+    // 同步器映射成 awaiting_approval，并惰性建立 corps 审批实例。
+    let synced: DeliverableSyncResult | null = null;
+    if (!isTerminalDeliverableStatus(row.status)) {
       try {
-        sidecar = await getLoomTask(row.taskId);
-        if (sidecar.status !== row.status) {
-          await runWithWorkspace(
-            wid,
-            (tx) =>
-              tx.deliverable.update({
-                where: { id: row.id },
-                data: {
-                  status: sidecar!.status,
-                  ...(sidecar!.finished_at
-                    ? { finishedAt: new Date(sidecar!.finished_at as unknown as string) }
-                    : {}),
-                  ...(sidecar!.output_path ? { outputPath: sidecar!.output_path } : {}),
-                  outputSummary: (sidecar!.output_content ?? "").slice(0, 2000) || null,
-                },
-              }),
-            ctx.payload.sub,
-          );
-        }
+        synced = await syncDeliverableFromLoom({ wid, userId: ctx.payload.sub, row });
       } catch (e) {
         if (e instanceof LoomUnavailableError) return loomErrorResponse(req, e);
-        // 其他同步异常不阻塞详情读取
+        // 其他同步异常不阻塞详情读取，但日志必须保留真因，不能静默伪装 running。
+        console.error(`[GET ai/deliverables/:id] sync failed id=${row.id}:`, e);
       }
     }
 
@@ -107,12 +96,15 @@ async function getDeliverableById(
         taskId: row.taskId,
         title: row.title,
         pipeline: row.pipeline,
-        status: sidecar?.status ?? row.status,
+        status: synced?.status ?? row.status,
         createdAt: row.createdAt,
-        finishedAt: sidecar?.finished_at ?? row.finishedAt,
-        error: sidecar?.error ?? null,
-        outputPath: sidecar?.output_path ?? row.outputPath,
-        outputContent: sidecar?.output_content ?? row.outputSummary,
+        finishedAt: synced?.finishedAt ?? row.finishedAt,
+        error: synced?.detail.error ?? null,
+        outputPath: synced?.outputPath ?? row.outputPath,
+        outputContent: synced?.detail.output_content ?? row.outputSummary,
+        approvalStatus: row.approvalStatus,
+        approvalInstanceId: synced?.approvalInstanceId ?? row.approvalInstanceId,
+        awaitingApproval: synced?.awaitingApproval ?? null,
       },
       message: apiMsg(req, "ok"),
     });
