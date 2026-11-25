@@ -3303,6 +3303,7 @@
       "pipeline_docgen_lean": "Standard + conditional verification (budget)",
       "pipeline_docgen_verified": "Standard + fact checking",
       "pipeline_docgen_render": "Standard + rendering (Word/PDF)",
+      "pipeline_docgen_review": "Document generation + pre-delivery review",
       "pipeline_kb_docgen": "Knowledge-base grounded",
       "submit": "Submit task",
       "submitting": "Submitting…",
@@ -3312,6 +3313,7 @@
       "empty": "No delivery tasks yet",
       "statusQueued": "Queued",
       "statusRunning": "Running",
+      "statusAwaitingApproval": "Awaiting human approval",
       "statusDone": "Done",
       "statusFailed": "Failed",
       "sidecarDown": "Delivery service is not ready (local delivery runtime not started). Start the nexusloom service first.",
@@ -3324,7 +3326,10 @@
       "approved": "Approved",
       "rejected": "Rejected",
       "approvalNotePrompt": "Reason for rejection",
-      "approving": "Working…"
+      "approving": "Working…",
+      "submitApproval": "Submit for approval",
+      "pendingApproval": "Awaiting approval",
+      "approvalInstanceLink": "View approval"
     }
   },
   "doc": {

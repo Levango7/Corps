@@ -73,4 +73,22 @@ describe("nexusloom 客户端", () => {
     expect(called.startsWith("http://192.168.1.10:8910")).toBe(true);
     delete process.env.NEXUSLOOM_URL;
   });
+
+  it("提交使用 60s 有界超时，不再被普通读取的 15s 提前截断", async () => {
+    const timeoutSpy = vi.spyOn(AbortSignal, "timeout");
+    mocks.fetch.mockResolvedValue(
+      new Response(JSON.stringify({ task_id: "task-1" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    const mod = await import("@/lib/ai/nexusloom");
+    await expect(mod.submitLoomTask({ query: "test", pipeline: "docgen-review" })).resolves.toEqual({
+      task_id: "task-1",
+    });
+    expect(timeoutSpy).toHaveBeenCalledWith(60_000);
+    const init = mocks.fetch.mock.calls[0]?.[1] as RequestInit;
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+    timeoutSpy.mockRestore();
+  });
 });

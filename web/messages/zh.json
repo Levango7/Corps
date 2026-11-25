@@ -3303,6 +3303,7 @@
       "pipeline_docgen_lean": "标准 + 条件核查（省钱）",
       "pipeline_docgen_verified": "标准 + 事实核查",
       "pipeline_docgen_render": "标准 + 渲染（Word/PDF）",
+      "pipeline_docgen_review": "文档生成 + 交付前人审",
       "pipeline_kb_docgen": "知识库接地生成",
       "submit": "提交任务",
       "submitting": "提交中…",
@@ -3312,6 +3313,7 @@
       "empty": "还没有交付任务",
       "statusQueued": "排队中",
       "statusRunning": "生成中",
+      "statusAwaitingApproval": "等待人工审批",
       "statusDone": "已完成",
       "statusFailed": "失败",
       "sidecarDown": "交付服务未就绪（本地交付运行时未启动），请先启动 nexusloom 服务",
@@ -3324,7 +3326,10 @@
       "approved": "已通过",
       "rejected": "已驳回",
       "approvalNotePrompt": "请填写驳回原因",
-      "approving": "处理中…"
+      "approving": "处理中…",
+      "submitApproval": "送审",
+      "pendingApproval": "待审批",
+      "approvalInstanceLink": "查看审批"
     }
   },
   "doc": {

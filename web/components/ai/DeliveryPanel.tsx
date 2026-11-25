@@ -2,7 +2,7 @@
 
 /**
  * AI 交付面板（AI 交付域第一竖切）：
- *  - 提交表单：主题/需求 + 流水线选择（docgen 系 5 档）→ POST /api/v1/ai/deliverables
+ *  - 提交表单：主题/需求 + 流水线选择（docgen 系 6 档）→ POST /api/v1/ai/deliverables
  *  - 任务列表：GET 轮询（10s），显示「排队/生成中/已完成/失败」阶段
  *  - 详情展开：GET /deliverables/<id>，展示交付内容（output_content）
  *
@@ -27,11 +27,19 @@ interface DeliverableRow {
   outputPath: string | null;
   /** 交付后审批态（null=待审批） */
   approvalStatus?: string | null;
+  /** 送审到 corps approvals 引擎后的实例关联（null=未送审） */
+  approvalInstanceId?: string | null;
 }
 
 interface DeliverableDetail extends DeliverableRow {
   outputContent: string | null;
   error: string | null;
+  /** sidecar 人审闸门等待信息（有值时任务尚未产出，需先到 approvals 页放行） */
+  awaitingApproval?: {
+    nodes?: string[];
+    messages?: Record<string, string>;
+    pipeline?: string;
+  } | null;
 }
 
 const PIPELINES = [
@@ -39,6 +47,7 @@ const PIPELINES = [
   "docgen-lean",
   "docgen-verified",
   "docgen-render",
+  "docgen-review",
   "kb-docgen",
 ] as const;
 
@@ -55,6 +64,23 @@ export default function DeliveryPanel({ wid }: { wid: string }) {
   const [detailLoading, setDetailLoading] = useState(false);
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  /** 送审到 corps approvals 引擎（完整审批流，审批人在 approvals 页操作）。 */
+  async function handleSubmitApproval(row: DeliverableRow) {
+    if (approvingId) return;
+    setApprovingId(row.id);
+    try {
+      await api<unknown>(
+        `/api/v1/ai/deliverables/${encodeURIComponent(row.id)}/submit-approval?wid=${encodeURIComponent(wid)}`,
+        { method: "POST" },
+      );
+      await loadList();
+    } catch (e) {
+      setListError(e instanceof Error ? e.message : t("error"));
+    } finally {
+      setApprovingId(null);
+    }
+  }
 
   /** 交付后审批（通过/驳回；驳回弹原因框）。成功后刷新列表。 */
   async function handleApproval(row: DeliverableRow, action: "approve" | "reject") {
@@ -144,6 +170,7 @@ export default function DeliveryPanel({ wid }: { wid: string }) {
 
   function statusLabel(status: string): string {
     const s = status.toLowerCase();
+    if (s.includes("awaiting_approval") || s === "paused") return t("statusAwaitingApproval");
     if (s.includes("done") || s.includes("complet")) return t("statusDone");
     if (s.includes("fail") || s.includes("error")) return t("statusFailed");
     if (s.includes("pend") || s.includes("queue")) return t("statusQueued");
@@ -152,6 +179,7 @@ export default function DeliveryPanel({ wid }: { wid: string }) {
 
   function statusColor(status: string): string {
     const s = status.toLowerCase();
+    if (s.includes("awaiting_approval") || s === "paused") return "text-[var(--accent)]";
     if (s.includes("done") || s.includes("complet")) return "text-[var(--success-fg)]";
     if (s.includes("fail") || s.includes("error")) return "text-[var(--danger-fg)]";
     return "text-[var(--muted)]";
@@ -307,8 +335,23 @@ export default function DeliveryPanel({ wid }: { wid: string }) {
                             {t("download")}
                           </a>
                         )}
+                        {/* 已送审但尚未裁决：只允许去标准审批页操作，不能再走自含审批绕过流程。 */}
+                        {detail.approvalInstanceId && !detail.approvalStatus && (
+                          <div className="flex items-center gap-2 pt-1">
+                            <span className="text-[length:var(--text-xs)] text-[var(--accent)]">
+                              {t("pendingApproval")}
+                            </span>
+                            <a
+                              href={`/w/${wid}/approvals/instances/${detail.approvalInstanceId}`}
+                              className="inline-flex items-center gap-1 text-[length:var(--text-xs)] text-[var(--accent)] hover:underline"
+                            >
+                              {t("approvalInstanceLink")}
+                            </a>
+                          </div>
+                        )}
                         {/* 交付后审批（已完成才有动作；已有结论显示徽标，重复审批服务端 409） */}
-                        {detail.status.toLowerCase().includes("done") && (
+                        {detail.status.toLowerCase().includes("done") &&
+                          (detail.approvalStatus || !detail.approvalInstanceId) && (
                           <div className="flex items-center gap-2 pt-1">
                             {detail.approvalStatus ? (
                               <span
@@ -339,6 +382,14 @@ export default function DeliveryPanel({ wid }: { wid: string }) {
                                   className="px-2.5 py-1 rounded-[var(--radius-md)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--danger-fg)] bg-[var(--danger-soft)] hover:opacity-80 disabled:opacity-50"
                                 >
                                   {t("reject")}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSubmitApproval(detail)}
+                                  disabled={approvingId === detail.id}
+                                  className="px-2.5 py-1 rounded-[var(--radius-md)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--accent)] bg-[var(--surface-2)] border border-[var(--border-soft)] hover:opacity-80 disabled:opacity-50"
+                                >
+                                  {t("submitApproval")}
                                 </button>
                               </>
                             )}

@@ -2,8 +2,9 @@
 //
 // 认证模式：getUserId → checkRateLimit → getWorkspaceContextV2（进墙）→ runWithWorkspace（RLS）
 // 语义：corps 自含的交付后审批层（用户验收动作），与 sidecar 的 DAG 人审节点不同——
-//       sidecar 的 approve/reject 只受理「审批等待中」的任务（docgen 无审批节点），
-//       交付后的质量确认记在本表 approvalStatus/approvedBy/approvedAt/approvalNote。
+//       sidecar 的 approve/reject 只受理「审批等待中」的任务（docgen-review 经
+//       标准 ApprovalInstance 联动），交付后的质量确认记在本表
+//       approvalStatus/approvedBy/approvedAt/approvalNote。
 // 只受理已完成任务；重复审批返回 409（幂等，不产生第二次决策）。
 
 import { NextRequest, NextResponse } from "next/server";
@@ -70,11 +71,14 @@ async function postApproval(req: NextRequest, { params }: { params: Promise<{ id
       async (tx) => {
         const row = await tx.deliverable.findFirst({
           where: { id, workspaceId: wid },
-          select: { id: true, status: true, approvalStatus: true },
+          select: { id: true, status: true, approvalStatus: true, approvalInstanceId: true },
         });
         if (!row) return { kind: "notFound" as const };
         if (row.status !== "done") return { kind: "notDone" as const };
         if (row.approvalStatus) return { kind: "already" as const, status: row.approvalStatus };
+        if (row.approvalInstanceId) {
+          return { kind: "inEngine" as const, instanceId: row.approvalInstanceId };
+        }
         return {
           kind: "ok" as const,
           row: await tx.deliverable.update({
@@ -101,6 +105,16 @@ async function postApproval(req: NextRequest, { params }: { params: Promise<{ id
     if (result.kind === "notDone") {
       return NextResponse.json(
         { code: 409, message: apiMsg(req, "aiApprovalNotDone"), data: null },
+        { status: 409 },
+      );
+    }
+    if (result.kind === "inEngine") {
+      return NextResponse.json(
+        {
+          code: 409,
+          message: apiMsg(req, "aiApprovalInEngine"),
+          data: { instanceId: result.instanceId },
+        },
         { status: 409 },
       );
     }

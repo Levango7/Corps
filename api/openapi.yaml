@@ -9,7 +9,7 @@ info:
     row for that workspace, then runs all tenant queries inside a transaction with
     app.workspace_id / app.user_id set (RLS binds at engine level in hardened
     deployments — see db/schema.sql).
-    Coverage: this contract declares 299 paths (updated 2026-11-23). The service also
+    Coverage: this contract declares 300 paths (updated 2026-11-24). The service also
     exposes additional routes that are not yet documented here; the authoritative
     gap list and its drift guard live in scripts/check_api_contract.py and
     scripts/api-contract-baseline.txt. New routes must be added here, or explicitly
@@ -10793,7 +10793,9 @@ paths:
       description: >-
         Submits a document-generation task to the nexusloom sidecar (async;
         poll by task id). Body { wid, query, title?, pipeline? } where pipeline
-        is one of docgen / docgen-lean / docgen-verified / docgen-render / kb-docgen.
+        is one of docgen / docgen-lean / docgen-verified / docgen-render /
+        docgen-review / kb-docgen. docgen-review pauses at a human-approval gate
+        and automatically creates an ApprovalInstance in the approvals domain.
         Rate limited to 10 per minute.
       operationId: submitAiDeliverable
       responses:
@@ -10900,6 +10902,31 @@ paths:
           description: Task not found
         '409':
           description: Not finished yet or already decided
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/deliverables/{id}/submit-approval:
+    post:
+      tags: [ai]
+      summary: Submit a completed deliverable into the approvals engine
+      description: >-
+        Creates an ApprovalInstance for a completed deliverable (full approval
+        flow in the approvals domain). Lazily creates the deliverable_review
+        template (owner approver, single sequential node) per workspace.
+        Only completed and not-yet-submitted deliverables; repeat returns 409.
+      operationId: submitDeliverableForApproval
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, pattern: '^[A-Za-z0-9_-]{1,128}$' }
+        - $ref: '#/components/parameters/WidQuery'
+      responses:
+        '200':
+          description: Created instance envelope
+        '404':
+          description: Deliverable not found
+        '409':
+          description: Not finished yet or already submitted
         '500':
           $ref: '#/components/responses/InternalError'
   /api/v1/mail/send:

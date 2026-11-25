@@ -18,10 +18,13 @@ import {
   LoomUnavailableError,
   decodeLoomTitle,
   encodeLoomTitle,
-  getLoomTask,
   listLoomTasks,
   submitLoomTask,
 } from "@/lib/ai/nexusloom";
+import {
+  isTerminalDeliverableStatus,
+  syncDeliverableFromLoom,
+} from "@/lib/ai/deliverable-sync";
 import { withRed } from "@/lib/red-metrics";
 
 const submitSchema = z.object({
@@ -29,7 +32,14 @@ const submitSchema = z.object({
   query: z.string().min(1).max(5000),
   title: z.string().min(1).max(150).optional(),
   pipeline: z
-    .enum(["docgen", "docgen-lean", "docgen-verified", "docgen-render", "kb-docgen"])
+    .enum([
+      "docgen",
+      "docgen-lean",
+      "docgen-verified",
+      "docgen-render",
+      "docgen-review",
+      "kb-docgen",
+    ])
     .optional(),
 });
 
@@ -133,31 +143,28 @@ async function postDeliverable(req: NextRequest) {
   }
 }
 
-/** 单条 running 记录的状态同步（sidecar 详情 → 库内刷新；失败静默下次再试） */
+/** 单条活动记录的状态同步（sidecar 详情 → 库内刷新；失败留日志，下次再试） */
 async function syncRunningTask(
   wid: string,
   userId: string,
-  row: { id: string; taskId: string; status: string },
+  row: {
+    id: string;
+    taskId: string;
+    title: string;
+    pipeline: string;
+    status: string;
+    outputPath: string | null;
+    outputSummary: string | null;
+    approvalInstanceId: string | null;
+    createdBy: string;
+  },
 ): Promise<void> {
   try {
-    const d = await getLoomTask(row.taskId);
-    if (d.status === row.status) return;
-    await runWithWorkspace(
-      wid,
-      (tx) =>
-        tx.deliverable.update({
-          where: { id: row.id },
-          data: {
-            status: d.status,
-            ...(d.finished_at ? { finishedAt: new Date(d.finished_at) } : {}),
-            ...(d.output_path ? { outputPath: d.output_path } : {}),
-            outputSummary: (d.output_content ?? "").slice(0, 2000) || null,
-          },
-        }),
-      userId,
-    );
-  } catch {
-    // sidecar 不可达/任务被清理：保留库内状态，下次轮询再试
+    await syncDeliverableFromLoom({ wid, userId, row });
+  } catch (error) {
+    // 保留库内状态下次再试，但必须留下真因；此前裸 catch 把 advisory-lock
+    // 反序列化错误伪装成持续 running，排障只能盲猜 sidecar。
+    console.error(`[deliverables sync] task=${row.taskId} id=${row.id}:`, error);
   }
 }
 
@@ -201,10 +208,11 @@ async function getDeliverables(req: NextRequest) {
       ctx.payload.sub,
     );
 
-    // running 态同步（限 5 条防放大；轮询节奏由前端 10s 承担）
-    const running = rows.filter((r) => r.status === "running").slice(0, 5);
-    if (running.length > 0) {
-      await Promise.all(running.map((r) => syncRunningTask(wid, ctx.payload.sub, r)));
+    // 活动态同步（限 5 条防放大；awaiting_approval 也要继续轮询，
+    // 否则 sidecar 闸门放行后 corps 会永远停在待审展示态）
+    const active = rows.filter((r) => !isTerminalDeliverableStatus(r.status)).slice(0, 5);
+    if (active.length > 0) {
+      await Promise.all(active.map((r) => syncRunningTask(wid, ctx.payload.sub, r)));
       rows = await runWithWorkspace(
         wid,
         (tx) =>
@@ -237,6 +245,8 @@ async function getDeliverables(req: NextRequest) {
           createdAt: r.createdAt,
           finishedAt: r.finishedAt,
           outputPath: r.outputPath,
+          approvalStatus: r.approvalStatus,
+          approvalInstanceId: r.approvalInstanceId,
         })),
         total: rows.length,
         sidecarTotal,

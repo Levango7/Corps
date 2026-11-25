@@ -299,6 +299,10 @@ export const API_MESSAGES = {
     zh: "该任务已有审批结论，不能重复审批",
     en: "This task already has an approval decision and cannot be approved again.",
   },
+  aiApprovalInEngine: {
+    zh: "该任务已送入审批流，请在审批中心处理，不能绕过审批直接操作",
+    en: "This task is already in the approvals workflow. Use the approvals page instead of bypassing it here.",
+  },
 
   /* ── 邮箱验证 ── */
   emailNotVerified: {

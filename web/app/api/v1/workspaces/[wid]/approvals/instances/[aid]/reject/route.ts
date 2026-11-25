@@ -5,6 +5,8 @@ import { authFailure } from "@/lib/auth-response";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { notifyUsers } from "@/lib/notification/record";
+import { syncDeliverableApproval } from "@/lib/approval/deliverable-linkage";
+import { releaseDeliverableGate } from "@/lib/ai/deliverable-sync";
 import { withRed } from "@/lib/red-metrics";
 
 /** 审批节点类型（nodes JSON 快照中的单节点） */
@@ -111,7 +113,10 @@ async function postApprovalsInstancesRejectByAid(
           ]);
         }
 
-        return { kind: "ok" as const, data: updated };
+        // 交付物审批联动：交付验收/人审闸门的驳回终态回写 Deliverable.approvalStatus
+        const linked = await syncDeliverableApproval(tx, updated, ctx.payload.sub, validated.comment);
+
+        return { kind: "ok" as const, data: updated, gateTaskId: linked.gateTaskId };
       },
       ctx.payload.sub,
     );
@@ -133,6 +138,15 @@ async function postApprovalsInstancesRejectByAid(
         { code: 403, message: apiMsg(req, "notApprover"), data: null },
         { status: 403 },
       );
+    }
+
+    // 事务已提交再调用外部 sidecar（网络 IO 不进 RLS 事务）。失败只记录，
+    // 下一次交付列表/详情轮询会读同一终态重试驳回。
+    if (result.gateTaskId) {
+      await releaseDeliverableGate(result.gateTaskId, {
+        status: "rejected",
+        comment: validated.comment ?? "",
+      });
     }
 
     return NextResponse.json({ code: 200, data: result.data });
