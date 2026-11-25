@@ -113,6 +113,10 @@ async function getDeliverableById(
         error: sidecar?.error ?? null,
         outputPath: sidecar?.output_path ?? row.outputPath,
         outputContent: sidecar?.output_content ?? row.outputSummary,
+        approvalStatus: row.approvalStatus,
+        approvedAt: row.approvedAt,
+        approvedBy: row.approvedBy,
+        approvalNote: row.approvalNote,
       },
       message: apiMsg(req, "ok"),
     });
