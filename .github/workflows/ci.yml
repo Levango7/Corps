@@ -848,6 +848,28 @@ jobs:
         run: python ../scripts/check_build_size.py
       - name: Mutation-check the build size guard itself
         run: python ../scripts/check_build_size.py --self-test
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri -> target
+      - name: Install Tauri Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf
+      - name: Prepare remote shell config
+        run: CORPS_SHELL_MODE=remote CORPS_WEB_URL=https://example.test node ../desktop/scripts/prepare-release.mjs
+      - name: Test desktop shell release mode
+        working-directory: desktop/src-tauri
+        run: |
+          TAURI_CONFIG="$(node -e "process.stdout.write(require('node:fs').readFileSync('tauri.release.conf.json', 'utf8'))")" \
+            cargo test --test release_mode
+          CORPS_SHELL_MODE=remote \
+          TAURI_CONFIG="$(node -e "process.stdout.write(require('node:fs').readFileSync('tauri.release.conf.json', 'utf8'))")" \
+            cargo test --test release_mode -- --ignored remote_build_env_disables_sidecar
 
   # ─── 产物化：构建并发布 Docker 镜像到 GitHub Container Registry（GHCR）───
   # 取代原 CloudBase 占位部署（此前刻意 exit 1 防假绿）。镜像即部署产物：

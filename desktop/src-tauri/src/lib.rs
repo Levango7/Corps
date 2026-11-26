@@ -4,12 +4,21 @@
 // 移动端：Android/iOS 平台入口调用 lib::run()，仅基础 WebView + 远程 URL
 //
 // 移动端架构：WebView → 远程 Next.js 服务器（地址由构建期 CORPS_WEB_URL 注入）
-// 桌面端架构：WebView → 本地 Node.js sidecar（127.0.0.1:3000）
+// 桌面端架构：embedded 模式 WebView → 本地 Node.js sidecar；remote 模式 WebView → CORPS_WEB_URL
 
 use tauri::Manager;
 
 pub const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const APP_IDENTIFIER: &str = "com.corps.desktop";
+
+/// 是否需要启动本地 Next.js sidecar。
+/// remote 模式由构建期把窗口 URL 指向 CORPS_WEB_URL，不启动本地服务。
+pub fn starts_sidecar(shell_mode: Option<&str>) -> bool {
+    !matches!(
+        shell_mode.map(|mode| mode.trim_matches(|c: char| c.is_whitespace() || c == '\u{feff}')),
+        Some("remote")
+    )
+}
 
 /// 移动端入口：基础 Tauri 应用（无 sidecar/托盘/快捷键）
 ///
