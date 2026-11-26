@@ -12,6 +12,8 @@
 > 2026-10-27 补：本手册回答"监控怎么跑、跑红了怎么分型"；**指标口径的定义（SLI 怎么算、
 > 哪些盲区不能误读）另见 [`SLI-internal-definition.md`](./SLI-internal-definition.md)**——
 > 那份文档刻意不设目标值，因为路线图 §5 负面清单写着"无正式实例时不对外承诺 SLO"。
+> 2026-11-27 更新：§1 增加 UptimeRobot 外部拨测行、§4.3 补充启用步骤；Cloudflare Worker
+> 自建方案已作废（见 §4.2）。
 
 ---
 
@@ -22,6 +24,7 @@
 | 容器 HEALTHCHECK | `docker-compose.yml` app 服务：`wget --spider http://127.0.0.1:3000/api/health`，interval 15s / timeout 5s / retries 5 / start_period 40s | `/api/health` HTTP 状态（内部真实执行 `SELECT 1`，2s 超时） | 每 15 秒连续 5 次失败判 unhealthy | 容器状态标记 unhealthy（编排平台可据此重启；compose 本身不自动重启） |
 | CI e2e | `.github/workflows/ci.yml` 的 `e2e` job：`next build` → `next start -p 3000` → 轮询 `/api/health`（最多 ~60s）→ vitest 集成测试打生产构建产物 | 生产构建可启动、健康检查可达、`tests/integration` 全过（14 文件 / 140 用例） | 每次 push/PR 到 main | PR 不能合入、main 变红 |
 | 定时 smoke | `.github/workflows/smoke.yml`：GET `$SMOKE_TARGET_URL/api/health`，校验 HTTP 200 且 `data.status=="ok"` && `data.db=="up"` | 线上应用存活 + 数据库可达 | 每 15 分钟（cron `*/15 * * * *`）；另有每日 01:00 UTC 的配置检查。**未配置 `vars.SMOKE_TARGET_URL` 时整条工作流判红**（`config-check` 失败），不是跳过 | job 失败 → GitHub 默认邮件告警 |
+| 外部 uptime | UptimeRobot 免费档：HTTP/Keyword monitor 打 `$CORPS_UPTIME_URL/api/health`（默认 `https://corps-five.vercel.app`），断言响应含 `"db":"up"` | 线上应用存活 + 数据库可达 | 每 5 分钟；配置与告警联系人是 owner 动作 | UptimeRobot 告警联系人通知 |
 | GitHub 告警邮件 | Actions 默认通知机制（Settings → Notifications） | smoke / CI 任一 workflow 失败即触发 | 失败即时 | 邮件通知 watch 用户与触发者 |
 
 健康检查端点说明（`web/app/api/health/route.ts`）：成功返回
@@ -93,6 +96,28 @@ DB 探测失败返回 503 `{ data:{ status:"degraded", db:"down" } }`。
 
 一句话建议：**先配 DSN/webhook（实现已就绪，零改动）** → 再 UptimeRobot（加密拨测频率）→
 source map 上传（补堆栈精度）→ 实例数 ≥ 3 或有 SLA 时才上 Prometheus。
+
+### 4.3 UptimeRobot 启用步骤（owner 动作）
+
+工程侧不代注册第三方服务。按以下步骤配置后，#50 的分钟级缺口才算闭环。
+
+1. 注册 UptimeRobot 免费档（当前能力：50 个 monitor、5 分钟间隔、Keyword monitor）。
+2. 新建 monitor：
+   - Monitor Type：`HTTP(s)` 或 `Keyword`；
+   - Friendly Name：`Corps /api/health`；
+   - URL：`https://corps-five.vercel.app/api/health`（若正式实例更换，改这里）；
+   - Monitor Interval：5 minutes；
+   - Keyword（若选 Keyword 类型）：`"db":"up"`；
+   - Alert Contacts：配置 owner 邮箱/webhook。
+3. 保存后等待至少 2 个检查周期，确认 UptimeRobot 仪表盘显示 up。
+4. 若界面只允许 HTTP status 断言、不允许关键字断言，则退化为只校验 HTTP 200，
+   并在此处明确标注“db=up 断言缺口”，不要假装已校验数据库可达。
+
+口径约束：
+
+- 这是 5 分钟级拨测，不是 1 分钟级；`docs/SLI-internal-definition.md` 的“分钟级”缺口按 5 分钟档满足。
+- 它不替代容器 HEALTHCHECK 与本地部署健康检查，也不构成对外 SLO。
+- 免费档数据保留 3 个月；更长期趋势需付费档或自建 Prometheus。
 
 ## 5. Smoke 告警处置流程
 
