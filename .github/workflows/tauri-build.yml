@@ -5,6 +5,18 @@ name: Tauri Build
 # Matrix: Windows / macOS / Linux — produces native installers per platform.
 on:
   workflow_dispatch:
+    inputs:
+      corps_shell_mode:
+        description: embedded（内嵌 Next.js）或 remote（直连 Web URL）
+        required: false
+        default: embedded
+        type: choice
+        options: [embedded, remote]
+      corps_web_url:
+        description: remote 模式必填；不得包含用户名或密码
+        required: false
+        default: ""
+        type: string
   push:
     tags: ["v*"]
 
@@ -121,6 +133,11 @@ jobs:
           # auto-update (it writes `{}`) while leaving only one set fails the build.
           CORPS_UPDATER_ENDPOINT: ${{ vars.CORPS_UPDATER_ENDPOINT }}
           CORPS_UPDATER_PUBKEY: ${{ vars.CORPS_UPDATER_PUBKEY }}
+          # Desktop-only variables keep mobile's shared CORPS_WEB_URL isolated.
+          # The URL is injected only in remote mode so a stale desktop URL cannot
+          # turn an embedded build into a mode-conflict failure.
+          CORPS_SHELL_MODE: ${{ inputs.corps_shell_mode || vars.CORPS_DESKTOP_SHELL_MODE }}
+          CORPS_WEB_URL: ${{ (inputs.corps_shell_mode || vars.CORPS_DESKTOP_SHELL_MODE) == 'remote' && (inputs.corps_web_url || vars.CORPS_DESKTOP_WEB_URL) || '' }}
 
       # Upload native installers per platform.
       # Paths vary by OS — if-no-files-found: warn avoids failures on non-applicable formats.

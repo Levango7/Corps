@@ -118,42 +118,20 @@ fn main() {
             // 开发模式下由 beforeDevCommand 启动 pnpm dev，无需此处启动。
             #[cfg(not(debug_assertions))]
             {
-                let resource_path = app.path().resource_dir()?;
-                let server_path = resource_path.join("standalone").join("server.js");
+                if corps_desktop_lib::starts_sidecar(option_env!("CORPS_SHELL_MODE")) {
+                    let resource_path = app.path().resource_dir()?;
+                    let server_path = resource_path.join("standalone").join("server.js");
 
-                // 检查 server.js 是否存在；缺失时弹出错误对话框后退出（不 panic）
-                // 注意：setup 在主线程执行，blocking_show 会死锁（对话框任务需
-                // run_on_main_thread 调度，而主线程正阻塞在 recv）。改用异步 show，
-                // 在回调中 exit，并 return Ok 让事件循环启动以显示对话框。
-                if !server_path.exists() {
-                    let app_handle = app.handle().clone();
-                    app.dialog()
-                        .message(format!(
-                            "未找到内嵌服务文件：\n{}\n\n请重新安装应用或联系技术支持。",
-                            server_path.display()
-                        ))
-                        .title("Corps 启动失败")
-                        .show(move |_| {
-                            app_handle.exit(1);
-                        });
-                    app.manage(SidecarState(Mutex::new(None)));
-                    return Ok(());
-                }
-
-                // 启动 Next.js standalone server，传递生产环境变量
-                let child = match Command::new("node")
-                    .arg(&server_path)
-                    .env("PORT", "3000")
-                    .env("HOSTNAME", "127.0.0.1")
-                    .env("NODE_ENV", "production")
-                    .spawn()
-                {
-                    Ok(c) => c,
-                    Err(e) => {
+                    // 检查 server.js 是否存在；缺失时弹出错误对话框后退出（不 panic）
+                    // 注意：setup 在主线程执行，blocking_show 会死锁（对话框任务需
+                    // run_on_main_thread 调度，而主线程正阻塞在 recv）。改用异步 show，
+                    // 在回调中 exit，并 return Ok 让事件循环启动以显示对话框。
+                    if !server_path.exists() {
                         let app_handle = app.handle().clone();
                         app.dialog()
                             .message(format!(
-                                "启动内嵌服务失败：\n{e}\n\n请确保系统已安装 Node.js 运行时。"
+                                "未找到内嵌服务文件：\n{}\n\n请重新安装应用或联系技术支持。",
+                                server_path.display()
                             ))
                             .title("Corps 启动失败")
                             .show(move |_| {
@@ -162,35 +140,61 @@ fn main() {
                         app.manage(SidecarState(Mutex::new(None)));
                         return Ok(());
                     }
-                };
 
-                // 存储子进程句柄，退出时终止
-                app.manage(SidecarState(Mutex::new(Some(child))));
-
-                // ─── 健康检查：等待 server 就绪后导航 webview ──────────
-                // 单独线程轮询 127.0.0.1:3000，最多重试 30 次（每次 500ms），
-                // 就绪后通过 window.eval 将 webview 跳转到本地服务地址。
-                let app_handle = app.handle().clone();
-                thread::spawn(move || {
-                    for _ in 0..30 {
-                        if TcpStream::connect("127.0.0.1:3000").is_ok() {
-                            if let Some(window) = app_handle.get_webview_window("main") {
-                                let _ = window
-                                    .eval("window.location.href = 'http://127.0.0.1:3000';");
-                            }
-                            return;
+                    // 启动 Next.js standalone server，传递生产环境变量
+                    let child = match Command::new("node")
+                        .arg(&server_path)
+                        .env("PORT", "3000")
+                        .env("HOSTNAME", "127.0.0.1")
+                        .env("NODE_ENV", "production")
+                        .spawn()
+                    {
+                        Ok(c) => c,
+                        Err(e) => {
+                            let app_handle = app.handle().clone();
+                            app.dialog()
+                                .message(format!(
+                                    "启动内嵌服务失败：\n{e}\n\n请确保系统已安装 Node.js 运行时。"
+                                ))
+                                .title("Corps 启动失败")
+                                .show(move |_| {
+                                    app_handle.exit(1);
+                                });
+                            app.manage(SidecarState(Mutex::new(None)));
+                            return Ok(());
                         }
-                        thread::sleep(Duration::from_millis(500));
-                    }
-                    // 30 次重试仍未就绪：在 webview 中提示用户
-                    if let Some(window) = app_handle.get_webview_window("main") {
-                        let _ = window.eval(
-                            "document.body.innerHTML = \
+                    };
+
+                    // 存储子进程句柄，退出时终止
+                    app.manage(SidecarState(Mutex::new(Some(child))));
+
+                    // ─── 健康检查：等待 server 就绪后导航 webview ──────────
+                    // 单独线程轮询 127.0.0.1:3000，最多重试 30 次（每次 500ms），
+                    // 就绪后通过 window.eval 将 webview 跳转到本地服务地址。
+                    let app_handle = app.handle().clone();
+                    thread::spawn(move || {
+                        for _ in 0..30 {
+                            if TcpStream::connect("127.0.0.1:3000").is_ok() {
+                                if let Some(window) = app_handle.get_webview_window("main") {
+                                    let _ = window
+                                        .eval("window.location.href = 'http://127.0.0.1:3000';");
+                                }
+                                return;
+                            }
+                            thread::sleep(Duration::from_millis(500));
+                        }
+                        // 30 次重试仍未就绪：在 webview 中提示用户
+                        if let Some(window) = app_handle.get_webview_window("main") {
+                            let _ = window.eval(
+                                "document.body.innerHTML = \
                              '<h2>服务启动超时</h2>\
                              <p>内嵌服务未能在预期时间内就绪，请重启应用或联系技术支持。</p>';",
-                        );
-                    }
-                });
+                            );
+                        }
+                    });
+                } else {
+                    app.manage(SidecarState(Mutex::new(None)));
+                }
             }
 
             // 开发模式下也注册空的 SidecarState，使 try_state::<SidecarState>() 始终可用
@@ -230,11 +234,12 @@ fn main() {
 
             // ─── 全局快捷键 Ctrl+Shift+C 唤起窗口 ─────────────
             let shortcut = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyC);
-            app.global_shortcut().on_shortcut(shortcut, move |app, _sc, event| {
-                if event.state == ShortcutState::Pressed {
-                    show_main_window(app);
-                }
-            })?;
+            app.global_shortcut()
+                .on_shortcut(shortcut, move |app, _sc, event| {
+                    if event.state == ShortcutState::Pressed {
+                        show_main_window(app);
+                    }
+                })?;
 
             // ─── 跟随系统主题 ──────────────────────────────────
             if let Some(window) = app.get_webview_window("main") {

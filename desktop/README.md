@@ -4,7 +4,10 @@
 
 将 Corps Web 端（`web/`，Next.js 16）打包为 Windows / macOS / Linux 原生桌面应用。
 
-基于 **Tauri v2** 构建，采用 Rust 内核 + WebView 渲染，体积远小于 Electron 方案。生产模式下，Next.js standalone server 作为 **Sidecar 子进程**内嵌于应用中，启动时自动拉起本地 HTTP server（默认 `127.0.0.1:3000`），WebView 加载该地址渲染界面。
+基于 **Tauri v2** 构建，采用 Rust 内核 + WebView 渲染，体积远小于 Electron 方案。生产模式有两种：
+
+- **embedded（默认）**：Next.js standalone server 作为 **Sidecar 子进程**内嵌于应用中，启动时自动拉起本地 HTTP server（默认 `127.0.0.1:3000`）。
+- **remote**：WebView 直接加载构建期显式注入的 `CORPS_WEB_URL`，不启动本地 sidecar；用于无自有域名的临时分发。remote 模式不得写死任何默认地址。
 
 ### 核心功能
 
@@ -14,10 +17,10 @@
 | 系统托盘 | 最小化到托盘；左键切换窗口可见性；右键菜单（显示/隐藏/退出） |
 | 全局快捷键 | `Ctrl+Shift+C`（macOS 下 `Cmd+Shift+C`）唤起主窗口 |
 | 关闭即最小化 | 点击窗口关闭按钮时隐藏到托盘，不退出进程 |
-| 自动更新 | 通过 `tauri-plugin-updater` 拉取远端版本并热更新 |
+| 自动更新 | embedded 模式可选；remote 模式强制关闭，手动分发 |
 | 开机自启 | `tauri-plugin-autostart` 支持设置开机启动 |
 | 深色/浅色主题 | 启动时跟随系统主题（`set_theme(None)`） |
-| Sidecar 内嵌 | Next.js standalone server 打包进二进制，无需外部 Node.js 环境 |
+| Sidecar 内嵌 | embedded 模式把 Next.js standalone server 打包进二进制 |
 
 ---
 
@@ -119,6 +122,24 @@ pnpm build:debug      # 等价于 tauri build --debug
 # 产物输出到 src-tauri/target/debug/bundle/
 ```
 
+### 无域名 remote 壳
+
+不配置任何默认别名；必须显式提供 `CORPS_WEB_URL`，缺失或不合法会 fail loud。
+
+```bash
+# Windows PowerShell
+$env:CORPS_SHELL_MODE='remote'
+$env:CORPS_WEB_URL='https://<你控制的部署地址>'
+pnpm build
+```
+
+```bash
+# Git Bash / Linux / macOS
+CORPS_SHELL_MODE=remote CORPS_WEB_URL='https://<你控制的部署地址>' pnpm build
+```
+
+remote 模式保留基础窗口尺寸与标题，使用 URL 作为 `frontendDist`，不运行 Next.js 构建、不打包 standalone；updater 强制关闭，产物按手动分发处理。GitHub Actions 手动构建可传 `corps_shell_mode` / `corps_web_url`，tag 构建读取桌面专用仓库变量 `CORPS_DESKTOP_SHELL_MODE` / `CORPS_DESKTOP_WEB_URL`，与移动端的 `CORPS_WEB_URL` 隔离。
+
 ### 生成应用图标
 
 准备一张 1024×1024 的 PNG，执行：
@@ -132,7 +153,18 @@ pnpm icon path/to/icon.png
 
 ## 环境变量
 
-桌面端在运行时内嵌 Next.js standalone server，需要通过环境变量配置后端连接、认证、AI、实时通信和存储等服务。
+### 构建期变量（决定壳形态）
+
+| 变量 | 必填 | 说明 |
+|------|------|------|
+| `CORPS_SHELL_MODE` | 否 | `embedded`（默认）或 `remote` |
+| `CORPS_WEB_URL` | remote 必填 | WebView 加载地址；只接受 https，或 `localhost`/`127.0.0.1`/`[::1]` 的 http；禁止 userinfo |
+| `CORPS_UPDATER_ENDPOINT` | embedded 可选 | updater 清单地址，必须与公钥成对 |
+| `CORPS_UPDATER_PUBKEY` | embedded 可选 | Tauri 更新公钥，必须与端点成对 |
+
+### 运行时变量（embedded 模式的内嵌服务）
+
+桌面端在 embedded 模式下运行时内嵌 Next.js standalone server，需要通过环境变量配置后端连接、认证、AI、实时通信和存储等服务。
 
 ### 配置方式
 
