@@ -6,3 +6,4 @@
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
 F:/tmp/corps-loom-daily | feat/loom-daily-report | web/lib/ai/loom-runtime.ts,web/app/api/v1/ai/daily-report/route.ts,web/tests/ai/loom-runtime.test.ts | zcode | 2026-11-22 16:30 | 2026-11-22 20:30 | nexusloom sidecar 日报运行时 adapter 试点
 F:/Nexus/corps-wt-actions | feat/corps-no-domain-shell | desktop/src-tauri/src/lib.rs,desktop/src-tauri/src/main.rs,desktop/src-tauri/tests/release_mode.rs,desktop/scripts/release-config.mjs,desktop/scripts/prepare-release.mjs,desktop/README.md,web/tests/unit/desktop-release-config.test.ts,.github/workflows/tauri-build.yml | qoder | 2026-11-24T10:25Z | 2026-11-24T14:25Z | #40 无域名壳：桌面 remote 模式（显式 CORPS_WEB_URL，缺失 fail loud）+ updater 保持关闭
+F:/Nexus/corps-wt-nexusloom-p0 | chore/nexusloom-p0-baseline | docs/ROADMAP-2026Q4.md | QoderCN | 2026-11-26T08:51Z | 2026-11-26T10:51Z | 按 check_burndown 门禁把 zero-coverage 当前值同步为实测 293
