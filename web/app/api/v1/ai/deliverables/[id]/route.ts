@@ -103,6 +103,8 @@ async function getDeliverableById(
         outputPath: synced?.outputPath ?? row.outputPath,
         outputContent: synced?.detail.output_content ?? row.outputSummary,
         approvalStatus: row.approvalStatus,
+        approvedAt: row.approvedAt,
+        approvedBy: row.approvedBy,
         approvalNote: row.approvalNote,
         approvalInstanceId: synced?.approvalInstanceId ?? row.approvalInstanceId,
         awaitingApproval: synced?.awaitingApproval ?? null,
