@@ -18,6 +18,7 @@
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
     "test:e2e": "playwright test --config playwright.config.ts",
+    "simulate:subagents": "tsx scripts/simulate-subagents.ts",
     "audit:high": "pnpm audit --prod --audit-level=high",
     "db:generate": "prisma generate",
     "db:migrate:dev": "prisma migrate dev",
