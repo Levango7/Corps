@@ -200,6 +200,8 @@ describe("desktop release CI", () => {
     ).replace(/\r\n/g, "\n");
     const buildJob = workflow.match(/^ {2}build:\n([\s\S]*?)(?=^ {2}[a-z][\w-]*:\n)/m)?.[1];
 
-    expect(buildJob).toContain("cargo test --test release_mode");
+    expect(buildJob).toContain(
+      "cargo test --test release_mode -- --ignored remote_build_env_disables_sidecar",
+    );
   });
 });
