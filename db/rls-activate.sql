@@ -18,7 +18,8 @@
 --     webhook   支付通道回调（订阅与计划同步）
 --     invite    按 token 读取邀请（公开预览/接受前的取件）
 --     seat      邀请/接受的席位保护段（wid+uid 齐备，允许 FOR UPDATE 行锁）
---     cron      定时作业跨工作区只读扫描（截止日提醒；无写入路径）
+--     cron      定时作业跨工作区只读扫描（截止日提醒）；
+--               delivery_outbox 是唯一写例外，专供有界后台 worker 与事务内 outbox 入队
 --     calendar  日历同步跨工作区只读扫描（任务定位/用户截止日任务扫描；无写入路径）
 --   public_token 不属于 op 枚举：documents 公开分享读按 share_token 与之相等放行
 --   （p_documents_share_select，仅 SELECT），token 本身 192 位熵不可猜。
@@ -69,7 +70,9 @@ BEGIN
     -- P1 公文 A1（任务 #83）：四对象，全 workspace_id 谓词
     'gov_docs','gov_doc_opinions','gov_doc_exchanges','gov_doc_attachments',
     -- AI 交付域（nexusloom sidecar 交付账本落库；workspace_id 谓词）
-    'deliverables'
+    'deliverables',
+    -- 交付同步 outbox（worker 仅经 cron op；其余入口只允许工作区 SELECT）
+    'delivery_outbox'
   ] LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('ALTER TABLE %I FORCE  ROW LEVEL SECURITY', t);
@@ -1050,6 +1053,17 @@ CREATE POLICY p_deliverables_update ON deliverables FOR UPDATE
 DROP POLICY IF EXISTS p_deliverables_delete ON deliverables;
 CREATE POLICY p_deliverables_delete ON deliverables FOR DELETE
   USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── delivery_outbox ──
+-- 普通工作区上下文只允许读取；写入/认领/完成必须经 cron op（runWithAuthOpTx
+-- 可把它与业务写合并到同一事务，不把 cron 变成客户端可伪造的身份）。
+DROP POLICY IF EXISTS p_delivery_outbox_select ON delivery_outbox;
+CREATE POLICY p_delivery_outbox_select ON delivery_outbox FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_delivery_outbox_cron ON delivery_outbox;
+CREATE POLICY p_delivery_outbox_cron ON delivery_outbox FOR ALL
+  USING (current_setting('app.auth_op', true) = 'cron')
+  WITH CHECK (current_setting('app.auth_op', true) = 'cron');
 
 -- ── favorites ──
 DROP POLICY IF EXISTS p_favorites_select ON favorites;

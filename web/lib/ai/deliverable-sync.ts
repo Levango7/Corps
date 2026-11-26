@@ -4,9 +4,9 @@
  * 列表轮询与详情读取共用这一条路径（避免两处状态机漂移）：
  *  1. 拉 sidecar 详情；
  *  2. 若停在 approval 节点：惰性创建闸门 ApprovalInstance 并把展示态置为
- *     awaiting_approval；已有终态决策则重试放行 sidecar（审批写入成功但
- *     外部调用失败时由下一次轮询自愈）；
- *  3. 其他状态原样回写（done/failed/cancelled/paused/running）。
+ *     awaiting_approval；已有终态决策则写入 outbox，由后台 worker 放行；
+ *  3. 其他状态原样回写（done/failed/cancelled/paused/running），UI 活跃任务
+ *     同时补一条幂等同步意图，后续不依赖用户继续打开页面。
  */
 
 import { runWithWorkspace } from "@/lib/auth";
@@ -22,6 +22,7 @@ import {
   readDeliverableGateDecision,
   type GateDecision,
 } from "@/lib/approval/deliverable-gate";
+import { enqueueDeliveryOutbox } from "@/lib/delivery/outbox";
 
 export interface SyncableDeliverable {
   id: string;
@@ -79,8 +80,10 @@ export async function syncDeliverableFromLoom(args: {
   wid: string;
   userId: string;
   row: SyncableDeliverable;
+  /** UI 访问会补充后续同步意图；worker 自身处理时不重复自生产。 */
+  source?: "ui" | "worker";
 }): Promise<DeliverableSyncResult> {
-  const { wid, userId, row } = args;
+  const { wid, userId, row, source = "ui" } = args;
   const detail = await getLoomTask(row.taskId);
   const awaiting = detail.awaiting_approval ?? null;
   const gatePending =
@@ -126,14 +129,28 @@ export async function syncDeliverableFromLoom(args: {
         },
       });
 
+      // 决策与后续同步都持久化为 outbox 意图，由后台 worker 执行。
+      if (decision) {
+        await enqueueDeliveryOutbox(tx, {
+          workspaceId: wid,
+          deliverableId: row.id,
+          taskId: row.taskId,
+          kind: decision.status === "approved" ? "approve" : "reject",
+        });
+      }
+      if (source === "ui" && !isTerminalDeliverableStatus(displayStatus)) {
+        await enqueueDeliveryOutbox(tx, {
+          workspaceId: wid,
+          deliverableId: row.id,
+          taskId: row.taskId,
+          kind: "sync",
+        });
+      }
+
       return { approvalInstanceId, decision };
     },
     userId,
   );
-
-  if (outcome.decision && gatePending) {
-    await releaseDeliverableGate(row.taskId, outcome.decision);
-  }
 
   return {
     detail,

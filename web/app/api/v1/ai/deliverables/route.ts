@@ -22,6 +22,7 @@ import {
   submitLoomTask,
 } from "@/lib/ai/nexusloom";
 import { isTerminalDeliverableStatus, syncDeliverableFromLoom } from "@/lib/ai/deliverable-sync";
+import { enqueueDeliveryOutbox } from "@/lib/delivery/outbox";
 import { withRed } from "@/lib/red-metrics";
 
 const submitSchema = z.object({
@@ -106,8 +107,8 @@ async function postDeliverable(req: NextRequest) {
     // 提交即落库：归属（wid/userId）在提交时已知，后续列表/详情按库展示与同步
     const row = await runWithWorkspace(
       body.wid,
-      (tx) =>
-        tx.deliverable.create({
+      async (tx) => {
+        const created = await tx.deliverable.create({
           data: {
             workspaceId: body.wid,
             taskId,
@@ -116,7 +117,15 @@ async function postDeliverable(req: NextRequest) {
             status: "running",
             createdBy: ctx.payload.sub,
           },
-        }),
+        });
+        await enqueueDeliveryOutbox(tx, {
+          workspaceId: body.wid,
+          deliverableId: created.id,
+          taskId,
+          kind: "sync",
+        });
+        return created;
+      },
       ctx.payload.sub,
     );
 
