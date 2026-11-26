@@ -34,6 +34,8 @@ interface DeliverableRow {
 interface DeliverableDetail extends DeliverableRow {
   outputContent: string | null;
   error: string | null;
+  /** 审批备注（驳回原因也在终态详情展示，不能只留在审批中心） */
+  approvalNote?: string | null;
   /** sidecar 人审闸门等待信息（有值时任务尚未产出，需先到 approvals 页放行） */
   awaitingApproval?: {
     nodes?: string[];
@@ -172,6 +174,7 @@ export default function DeliveryPanel({ wid }: { wid: string }) {
     const s = status.toLowerCase();
     if (s.includes("awaiting_approval") || s === "paused") return t("statusAwaitingApproval");
     if (s.includes("done") || s.includes("complet")) return t("statusDone");
+    if (s.includes("cancel")) return t("statusCancelled");
     if (s.includes("fail") || s.includes("error")) return t("statusFailed");
     if (s.includes("pend") || s.includes("queue")) return t("statusQueued");
     return t("statusRunning");
@@ -181,6 +184,7 @@ export default function DeliveryPanel({ wid }: { wid: string }) {
     const s = status.toLowerCase();
     if (s.includes("awaiting_approval") || s === "paused") return "text-[var(--accent)]";
     if (s.includes("done") || s.includes("complet")) return "text-[var(--success-fg)]";
+    if (s.includes("cancel")) return "text-[var(--danger-fg)]";
     if (s.includes("fail") || s.includes("error")) return "text-[var(--danger-fg)]";
     return "text-[var(--muted)]";
   }
@@ -313,6 +317,11 @@ export default function DeliveryPanel({ wid }: { wid: string }) {
                             {detail.error}
                           </p>
                         )}
+                        {detail.approvalNote && (
+                          <p className="text-[length:var(--text-sm)] text-[var(--muted)]">
+                            {t("approvalNote")}: {detail.approvalNote}
+                          </p>
+                        )}
                         {detail.outputContent ? (
                           <pre className="whitespace-pre-wrap text-[length:var(--text-sm)] text-[var(--fg)] max-h-72 overflow-auto rounded-[var(--radius-md)] bg-[var(--surface)] p-3 border border-[var(--border-soft)]">
                             {detail.outputContent}
@@ -342,7 +351,7 @@ export default function DeliveryPanel({ wid }: { wid: string }) {
                               {t("pendingApproval")}
                             </span>
                             <a
-                              href={`/w/${wid}/approvals/instances/${detail.approvalInstanceId}`}
+                              href={`/w/${wid}/approvals/${detail.approvalInstanceId}`}
                               className="inline-flex items-center gap-1 text-[length:var(--text-xs)] text-[var(--accent)] hover:underline"
                             >
                               {t("approvalInstanceLink")}
