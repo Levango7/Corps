@@ -7,7 +7,6 @@ import { apiMsg } from "@/lib/api-messages";
 import { notifyUsers } from "@/lib/notification/record";
 import { applyPermissionOnApproval } from "@/lib/approval/permission-linkage";
 import { syncDeliverableApproval } from "@/lib/approval/deliverable-linkage";
-import { releaseDeliverableGate } from "@/lib/ai/deliverable-sync";
 import { withRed } from "@/lib/red-metrics";
 
 /** 审批节点类型（nodes JSON 快照中的单节点） */
@@ -220,15 +219,7 @@ async function postApprovalsInstancesApproveByAid(
       );
     }
 
-    // 事务已提交再调用外部 sidecar（网络 IO 不进 RLS 事务）。失败只记录，
-    // 下一次交付列表/详情轮询会读同一终态重试放行。
-    if (result.gateTaskId) {
-      await releaseDeliverableGate(result.gateTaskId, {
-        status: "approved",
-        comment: validated.comment ?? "",
-      });
-    }
-
+    // 审批终态已在同事务写入 delivery_outbox，后台 worker 负责 sidecar 放行。
     return NextResponse.json({ code: 200, data: result.data });
   } catch (error) {
     if (error instanceof z.ZodError) {

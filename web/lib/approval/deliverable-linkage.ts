@@ -13,12 +13,14 @@
 
 import type { Prisma } from "@prisma/client";
 import { DELIVERABLE_GATE_ENTITY } from "./deliverable-gate";
+import { enqueueDeliveryOutbox } from "@/lib/delivery/outbox";
 
 type Tx = Prisma.TransactionClient;
 
 const DELIVERABLE_ENTITY_TYPES = new Set(["deliverable", DELIVERABLE_GATE_ENTITY]);
 
 interface DeliverableLinkedInstance {
+  workspaceId: string;
   entityType: string | null;
   entityId: string | null;
   status: string;
@@ -72,5 +74,16 @@ export async function syncDeliverableApproval(
       ...(comment ? { approvalNote: comment } : {}),
     },
   });
-  return { gateTaskId: gateTaskIdOf(instance) };
+
+  const gateTaskId = gateTaskIdOf(instance);
+  if (gateTaskId) {
+    // 审批终态与 sidecar 执行意图同事务落库，后台 worker 负责重放。
+    await enqueueDeliveryOutbox(tx, {
+      workspaceId: instance.workspaceId,
+      deliverableId: instance.entityId,
+      taskId: gateTaskId,
+      kind: instance.status === "approved" ? "approve" : "reject",
+    });
+  }
+  return { gateTaskId };
 }

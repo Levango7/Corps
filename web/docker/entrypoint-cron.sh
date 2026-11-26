@@ -7,7 +7,7 @@
 #   - recycle-cleanup           每天 03:00（回收站过期清理，保留期默认 30 天；同上补排）
 #   - check-expired-permissions 每天 04:00（临时授权过期回收；判定时有内联兜底，低频足够）
 #   - cleanup-uploads           每周一 04:00
-# 九个路由均以 CRON_SECRET Bearer 鉴权（与 /api/cron/* 路由约定一致）。
+# 十个路由均以 CRON_SECRET Bearer 鉴权（与 /api/cron/* 路由约定一致）。
 #
 # 说明：
 #   - wget 是 alpine 自带的；busybox crond -f 前台运行，容器主进程即调度器
@@ -29,7 +29,7 @@ echo "----------------------------------------------------------"
 echo " [entrypoint-cron] Corps cron 调度容器启动"
 echo " 时区（CRON_TZ）：${CRON_TZ}"
 echo " 调度目标（APP_HOST）：${APP_HOST}"
-echo " 计划：due-reminders 每日 01:00 / check-overdue-actions 每日 01:30 / recycle-cleanup 每日 03:00 / check-expired-permissions 每日 04:00 / weekly-digest 每周一 02:00 / cleanup-uploads 每周一 04:00 / ai-push-runner 每 30 分钟 / ai-push-web 每 15 分钟 / calendar-reconcile 每周日 05:00"
+echo " 计划：deliverable-outbox 每分钟 / due-reminders 每日 01:00 / check-overdue-actions 每日 01:30 / recycle-cleanup 每日 03:00 / check-expired-permissions 每日 04:00 / weekly-digest 每周一 02:00 / cleanup-uploads 每周一 04:00 / ai-push-runner 每 30 分钟 / ai-push-web 每 15 分钟 / calendar-reconcile 每周日 05:00"
 echo "----------------------------------------------------------"
 
 # busybox crontab 的 TZ 通过环境注入：crond 继承本进程环境，date 按 CRON_TZ 解释计划
@@ -56,6 +56,8 @@ cat > "${CRONTAB_FILE}" <<EOF
 */15 * * * * wget -qO- --server-response --header="Authorization: Bearer ${CRON_SECRET}" "http://${APP_HOST}/api/cron/ai-push-web" 2>&1 | tail -1 >> /proc/1/fd/1
 # 日历同步对账：每周日 05:00（对账非实时；reconcile.ts 的过期阈值就是 7 天，更高频无收益）
 0 5 * * 0 wget -qO- --server-response --header="Authorization: Bearer ${CRON_SECRET}" "http://${APP_HOST}/api/cron/calendar-reconcile" 2>&1 | tail -1 >> /proc/1/fd/1
+# 交付 outbox：每分钟有界批处理（租约+条件认领保证多实例/重启不重复决策）
+* * * * * wget -qO- --server-response --header="Authorization: Bearer ${CRON_SECRET}" "http://${APP_HOST}/api/cron/deliverable-outbox" 2>&1 | tail -1 >> /proc/1/fd/1
 EOF
 
 # crond 前台运行（-f），日志输出到 stdout（docker logs 可见）

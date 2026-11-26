@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => ({
   runWithWorkspace: vi.fn(),
   ensureGate: vi.fn(),
   readDecision: vi.fn(),
+  outboxCreate: vi.fn(),
+  outboxFindUnique: vi.fn(),
 }));
 
 vi.mock("@/lib/ai/nexusloom", () => ({
@@ -15,7 +17,10 @@ vi.mock("@/lib/ai/nexusloom", () => ({
   rejectLoomTask: mocks.rejectLoomTask,
 }));
 
-vi.mock("@/lib/auth", () => ({ runWithWorkspace: mocks.runWithWorkspace }));
+vi.mock("@/lib/auth", () => ({
+  runWithWorkspace: mocks.runWithWorkspace,
+  runWithAuthOpTx: vi.fn((tx, _op, fn) => fn(tx)),
+}));
 
 vi.mock("@/lib/approval/deliverable-gate", () => ({
   ensureDeliverableGateApproval: mocks.ensureGate,
@@ -39,7 +44,13 @@ const baseRow = {
 describe("deliverable gate sync", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    const tx = { deliverable: { update: vi.fn().mockResolvedValue({}) } };
+    const tx = {
+      deliverable: { update: vi.fn().mockResolvedValue({}) },
+      deliveryOutbox: {
+        findUnique: mocks.outboxFindUnique.mockResolvedValue(null),
+        create: mocks.outboxCreate.mockResolvedValue({}),
+      },
+    };
     mocks.runWithWorkspace.mockImplementation(
       async (_wid: string, fn: (value: unknown) => unknown) => fn(tx),
     );
@@ -69,7 +80,7 @@ describe("deliverable gate sync", () => {
     expect(result.awaitingApproval?.nodes).toEqual(["approval_gate"]);
   });
 
-  it("审批已通过但 sidecar 仍等待时重试放行，备注原样透传", async () => {
+  it("审批已通过但 sidecar 仍等待时写入放行 outbox，不由 UI 直接放行", async () => {
     mocks.getLoomTask.mockResolvedValue({
       id: "task-1",
       status: "paused",
@@ -92,11 +103,14 @@ describe("deliverable gate sync", () => {
     });
 
     expect(mocks.ensureGate).not.toHaveBeenCalled();
-    expect(mocks.approveLoomTask).toHaveBeenCalledWith("task-1", "验收通过");
+    expect(mocks.outboxCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({ kind: "approve", taskId: "task-1" }),
+    });
+    expect(mocks.approveLoomTask).not.toHaveBeenCalled();
     expect(mocks.rejectLoomTask).not.toHaveBeenCalled();
   });
 
-  it("sidecar 投影只剩 paused 时仍按既有审批终态重试放行", async () => {
+  it("sidecar 投影只剩 paused 时仍按既有审批终态写入 outbox", async () => {
     mocks.getLoomTask.mockResolvedValue({
       id: "task-1",
       status: "paused",
@@ -119,7 +133,10 @@ describe("deliverable gate sync", () => {
     });
 
     expect(result.status).toBe("awaiting_approval");
-    expect(mocks.approveLoomTask).toHaveBeenCalledWith("task-1", "重启前已批准");
+    expect(mocks.outboxCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({ kind: "approve", taskId: "task-1" }),
+    });
+    expect(mocks.approveLoomTask).not.toHaveBeenCalled();
   });
 
   it("普通完成任务不创建审批，也不会触发闸门放行", async () => {

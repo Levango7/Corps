@@ -217,6 +217,7 @@ model Workspace {
   // IM 升级：独立会话（单聊/群聊）
   conversations      Conversation[]
   deliverables       Deliverable[]
+  deliveryOutbox     DeliveryOutbox[]
   subscriptions      Subscription?
   analyticsEvents    AnalyticsEvent[]
   labels             Label[]
@@ -2604,6 +2605,32 @@ model Deliverable {
   @@unique([workspaceId, taskId])
   @@index([workspaceId, status])
   @@map("deliverables")
+}
+
+/// 交付同步 outbox：把 sidecar 状态同步与闸门决策从 UI 轮询解耦。
+/// 只存可重放意图与最小 payload，不复制交付正文；worker 经 cron op 处理。
+model DeliveryOutbox {
+  id            String    @id @default(uuid()) @db.Uuid
+  workspaceId   String    @map("workspace_id") @db.Uuid
+  deliverableId String    @map("deliverable_id") @db.Uuid
+  taskId        String    @map("task_id") @db.VarChar(64)
+  kind          String    @db.VarChar(20)
+  dedupeKey     String    @map("dedupe_key") @db.VarChar(160)
+  status        String    @default("pending") @db.VarChar(20)
+  attempts      Int       @default(0)
+  nextAttemptAt DateTime  @default(now()) @map("next_attempt_at") @db.Timestamptz
+  leaseUntil    DateTime? @map("lease_until") @db.Timestamptz
+  payload       Json      @default("{}")
+  lastError     String?   @map("last_error") @db.Text
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, dedupeKey])
+  @@index([status, nextAttemptAt])
+  @@index([leaseUntil])
+  @@map("delivery_outbox")
 }
 
 model EmailAccount {
