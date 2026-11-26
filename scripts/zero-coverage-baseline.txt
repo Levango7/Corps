@@ -48,9 +48,7 @@ app/api/v1/ai/conversations/route.ts
 app/api/v1/ai/daily-report/route.ts
 app/api/v1/ai/decision-assistant/route.ts
 app/api/v1/ai/deliverables/[id]/download/route.ts
-app/api/v1/ai/deliverables/[id]/route.ts
 app/api/v1/ai/deliverables/[id]/submit-approval/route.ts
-app/api/v1/ai/deliverables/route.ts
 app/api/v1/ai/deliverables/webhook/route.ts
 app/api/v1/ai/doc-qa/route.ts
 app/api/v1/ai/feedback/route.ts
