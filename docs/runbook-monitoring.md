@@ -24,7 +24,7 @@
 | 容器 HEALTHCHECK | `docker-compose.yml` app 服务：`wget --spider http://127.0.0.1:3000/api/health`，interval 15s / timeout 5s / retries 5 / start_period 40s | `/api/health` HTTP 状态（内部真实执行 `SELECT 1`，2s 超时） | 每 15 秒连续 5 次失败判 unhealthy | 容器状态标记 unhealthy（编排平台可据此重启；compose 本身不自动重启） |
 | CI e2e | `.github/workflows/ci.yml` 的 `e2e` job：`next build` → `next start -p 3000` → 轮询 `/api/health`（最多 ~60s）→ vitest 集成测试打生产构建产物 | 生产构建可启动、健康检查可达、`tests/integration` 全过（14 文件 / 140 用例） | 每次 push/PR 到 main | PR 不能合入、main 变红 |
 | 定时 smoke | `.github/workflows/smoke.yml`：GET `$SMOKE_TARGET_URL/api/health`，校验 HTTP 200 且 `data.status=="ok"` && `data.db=="up"` | 线上应用存活 + 数据库可达 | 每 15 分钟（cron `*/15 * * * *`）；另有每日 01:00 UTC 的配置检查。**未配置 `vars.SMOKE_TARGET_URL` 时整条工作流判红**（`config-check` 失败），不是跳过 | job 失败 → GitHub 默认邮件告警 |
-| 外部 uptime | UptimeRobot 免费档：HTTP/Keyword monitor 打 `$CORPS_UPTIME_URL/api/health`（默认 `https://corps-five.vercel.app`），断言响应含 `"db":"up"` | 线上应用存活 + 数据库可达 | 每 5 分钟；配置与告警联系人是 owner 动作 | UptimeRobot 告警联系人通知 |
+| 外部 uptime | UptimeRobot 免费档：HTTP/Keyword monitor 打目标 URL（当前 Vercel 生产实例 `https://corps-five.vercel.app/api/health`），断言响应含 `"db":"up"` | 线上应用存活 + 数据库可达 | 每 5 分钟；配置与告警联系人是 owner 动作 | UptimeRobot 告警联系人通知 |
 | GitHub 告警邮件 | Actions 默认通知机制（Settings → Notifications） | smoke / CI 任一 workflow 失败即触发 | 失败即时 | 邮件通知 watch 用户与触发者 |
 
 健康检查端点说明（`web/app/api/health/route.ts`）：成功返回
