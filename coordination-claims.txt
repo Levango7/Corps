@@ -5,5 +5,4 @@
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
 F:/Nexus/corps-wt-ui-contract | test/ui-contract-matrix | web/e2e/**,docs/ui-contract-matrix.md | zcode-ui-contract | 2026-11-28T03:54Z | 2026-11-28T15:54Z | 真实 UI 契约矩阵、主流程与异常路径验收
-F:/Nexus/corps-wt-nexusloom-p0 | fix/deliverable-webhook-integrity | web/tests/integration/deliverable-*.ts,web/tests/integration/deliverable-*.test.ts,scripts/deliverable-*.ts,scripts/deliverable-*.mjs,web/package.json,web/vitest.config.ts,.github/workflows/ci.yml,docs/runbook-*.md | qoder | 2026-11-28T04:09Z | 2026-11-28T08:09Z | 实现 #399：Corps↔Nexusloom 全链路集成测试
 F:/Nexus/corps-wt-monitor | docs/uptimerobot-target-url | docs/ops/UPTIMEROBOT-SETUP.md,docs/runbook-monitoring.md | qoder | 2026-11-28T04:12Z | 2026-11-28T12:12Z | 写 UptimeRobot owner 配置清单
