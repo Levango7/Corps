@@ -99,7 +99,7 @@ source map 上传（补堆栈精度）→ 实例数 ≥ 3 或有 SLA 时才上 P
 
 ### 4.3 UptimeRobot 启用步骤（owner 动作）
 
-工程侧不代注册第三方服务。按以下步骤配置后，#50 的分钟级缺口才算闭环。
+工程侧不代注册第三方服务。按以下步骤配置后，#50 的分钟级缺口才算闭环。逐字段照抄清单见 [`docs/ops/UPTIMEROBOT-SETUP.md`](../ops/UPTIMEROBOT-SETUP.md)。
 
 1. 注册 UptimeRobot 免费档（当前能力：50 个 monitor、5 分钟间隔、Keyword monitor）。
 2. 新建 monitor：
