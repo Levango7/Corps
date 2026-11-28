@@ -74,6 +74,55 @@ describe("nexusloom 客户端", () => {
     delete process.env.NEXUSLOOM_URL;
   });
 
+  it("Docker Compose 服务名允许精确 nexusloom，任意域名仍 fail-closed", async () => {
+    process.env.NEXUSLOOM_URL = "http://nexusloom:8910";
+    mocks.fetch.mockResolvedValue(new Response("{}", { status: 200 }));
+    const mod = await import("@/lib/ai/nexusloom");
+    await mod.loomHealthy();
+    expect((mocks.fetch.mock.calls[0]?.[0] as string).startsWith("http://nexusloom:8910")).toBe(
+      true,
+    );
+
+    process.env.NEXUSLOOM_URL = "http://example.com:8910";
+    await mod.loomHealthy();
+    expect((mocks.fetch.mock.calls[1]?.[0] as string).startsWith("http://127.0.0.1:8910")).toBe(
+      true,
+    );
+
+    process.env.NEXUSLOOM_URL = "http://nexusloom.evil.com:8910";
+    await mod.loomHealthy();
+    expect((mocks.fetch.mock.calls[2]?.[0] as string).startsWith("http://127.0.0.1:8910")).toBe(
+      true,
+    );
+    delete process.env.NEXUSLOOM_URL;
+  });
+
+  it("重启后从持久审批收件箱识别待放行任务", async () => {
+    mocks.fetch.mockImplementation(
+      async () =>
+        new Response(
+          JSON.stringify({
+            approvals: [
+              {
+                request_id: "request-1",
+                run_id: "task-1",
+                pipeline: "docgen-review",
+                nodes: ["approval_gate"],
+              },
+            ],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+    );
+    const mod = await import("@/lib/ai/nexusloom");
+    await expect(mod.getLoomPendingApproval("task-1")).resolves.toMatchObject({
+      request_id: "request-1",
+      run_id: "task-1",
+    });
+    await expect(mod.getLoomPendingApproval("task-2")).resolves.toBeNull();
+    expect(mocks.fetch.mock.calls[0]?.[0]).toBe("http://127.0.0.1:8910/api/approvals");
+  });
+
   it("提交使用 60s 有界超时，不再被普通读取的 15s 提前截断", async () => {
     const timeoutSpy = vi.spyOn(AbortSignal, "timeout");
     mocks.fetch.mockResolvedValue(

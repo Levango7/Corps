@@ -211,6 +211,29 @@ bash deploy/scripts/restore.sh --dry-run "${BACKUP_DIR}/corps-<ts>.dump"
 
 逻辑备份（pg_dump），非 WAL 连续归档。RPO ≈ 备份间隔（默认 24 小时），不保证零数据丢失。
 
+### 4.5.1 Staging 的 sidecar 同栈备份
+
+文档交付 Staging 使用 `deploy/docker-compose.staging.yml` 与 `deploy/.env.staging`，
+不要拿生产 `.env.prod` 混用。完整执行口径见 `deploy/README.md` §12；启动、冒烟、备份与
+恢复只允许走同目录的 `staging-*.sh`，不要手工拼另一组 compose 参数。
+
+与生产数据库备份不同，这条链还必须保护 NexusLoom 的任务/审批/成本 SQLite（含 WAL）、
+checkpoint、输出文件、日志与版本。它们统一固定在 `${NEXUSLOOM_DATA_DIR}`；Admin API 与
+独立 worker 共用该目录，两个进程都必须在运行。LiveKit 仅 `--profile livekit` 时启用。
+
+```bash
+bash deploy/scripts/staging-up.sh
+bash deploy/scripts/staging-smoke.sh
+bash deploy/scripts/staging-backup.sh
+bash deploy/scripts/staging-restore.sh <备份.dump>          # 临时库 dry-run
+printf 'RESTORE\n' | bash deploy/scripts/staging-restore.sh <备份.dump> --force
+```
+
+备份会短暂停止 app/cron，并 `pause` 两个 sidecar 进程（不能 `stop`，否则待审任务会被
+取消）。dump 与 sidecar tar 按同一时间戳同名配对；缺配对归档必须在任何覆盖前失败。
+恢复验收不能停在 `/api/health`：还要核对持久待审可批准续跑、历史交付可下载，以及
+恢复后能新建并完成交付任务。
+
 ---
 
 ## 5. 安全事项（2026-08-24 泄密轮换要求）

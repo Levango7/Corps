@@ -22,11 +22,14 @@
  * 非法 host fail-closed 退回默认回环端点，而不是照打。 */
 function resolveLoomBase(): string {
   const raw = (process.env.NEXUSLOOM_URL ?? "http://127.0.0.1:8910").replace(/\/+$/, "");
-  if (
-    !/^https?:\/\/(127\.0\.0\.1|localhost|\[::1\]|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(
+  // Docker Compose 的服务名是私网 DNS 名而非 IP；只允许精确的 nexusloom
+  // 服务名，不能放开任意域名，否则会把 SSRF 防线变成任意主机白名单。
+  const isComposeService = /^https?:\/\/nexusloom(?::\d+)?(?:\/|$)/.test(raw);
+  const isPrivateIp =
+    /^https?:\/\/(127\.0\.0\.1|localhost|\[::1\]|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(
       raw,
-    )
-  ) {
+    );
+  if (!isComposeService && !isPrivateIp) {
     return "http://127.0.0.1:8910";
   }
   return raw;
@@ -111,6 +114,11 @@ export interface LoomAwaitingApproval {
   pipeline?: string;
 }
 
+export interface LoomPendingApproval extends LoomAwaitingApproval {
+  request_id: string;
+  run_id: string;
+}
+
 export interface LoomTaskDetail extends LoomTaskSummary {
   result: Record<string, unknown>;
   output_path: string | null;
@@ -159,6 +167,21 @@ export async function getLoomTask(id: string): Promise<LoomTaskDetail> {
   assertSafeLoomId(id);
   try {
     return (await loomFetch(`/tasks/${id}`)) as LoomTaskDetail;
+  } catch (e) {
+    if (e instanceof LoomUnavailableError) throw e;
+    throw new LoomUnavailableError(String(e));
+  }
+}
+
+/** 跨重启的持久待审批据。任务投影在重启后可能丢了内存里的 awaiting 标记，
+ * 但 /api/approvals 仍保留 pending；worker 必须据此区分“待放行”与“已放行”。 */
+export async function getLoomPendingApproval(id: string): Promise<LoomPendingApproval | null> {
+  assertSafeLoomId(id);
+  try {
+    const data = (await loomFetch("/api/approvals")) as {
+      approvals?: LoomPendingApproval[];
+    };
+    return (data.approvals ?? []).find((row) => row.run_id === id) ?? null;
   } catch (e) {
     if (e instanceof LoomUnavailableError) throw e;
     throw new LoomUnavailableError(String(e));

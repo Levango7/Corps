@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   getLoomTask: vi.fn(),
+  getLoomPendingApproval: vi.fn(),
   approveLoomTask: vi.fn(),
   rejectLoomTask: vi.fn(),
   runWithWorkspace: vi.fn(),
@@ -13,6 +14,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/lib/ai/nexusloom", () => ({
   getLoomTask: mocks.getLoomTask,
+  getLoomPendingApproval: mocks.getLoomPendingApproval,
   approveLoomTask: mocks.approveLoomTask,
   rejectLoomTask: mocks.rejectLoomTask,
 }));
@@ -44,6 +46,7 @@ const baseRow = {
 describe("deliverable gate sync", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.getLoomPendingApproval.mockResolvedValue(null);
     const tx = {
       deliverable: { update: vi.fn().mockResolvedValue({}) },
       deliveryOutbox: {
@@ -137,6 +140,65 @@ describe("deliverable gate sync", () => {
       data: expect.objectContaining({ kind: "approve", taskId: "task-1" }),
     });
     expect(mocks.approveLoomTask).not.toHaveBeenCalled();
+  });
+
+  it("独立 worker 的投影没有 awaiting 时，持久 pending 也能首次建审批实例", async () => {
+    mocks.getLoomTask.mockResolvedValue({
+      id: "task-1",
+      status: "running",
+      pipeline: "docgen-review",
+      created_at: null,
+      finished_at: null,
+      error: null,
+      result: {},
+      output_path: "output/task-1.md",
+      output_content: "待审正文",
+      awaiting_approval: null,
+    });
+    mocks.getLoomPendingApproval.mockResolvedValue({
+      request_id: "request-1",
+      run_id: "task-1",
+      nodes: ["approval_gate"],
+    });
+
+    const result = await syncDeliverableFromLoom({ wid: "wid-1", userId: "user-1", row: baseRow });
+
+    expect(result.status).toBe("awaiting_approval");
+    expect(result.approvalInstanceId).toBe("instance-1");
+    expect(mocks.ensureGate).toHaveBeenCalledOnce();
+  });
+
+  it("重启后 running 投影与持久 pending 并存时保持待审并写入放行意图", async () => {
+    mocks.getLoomTask.mockResolvedValue({
+      id: "task-1",
+      status: "running",
+      pipeline: "docgen-review",
+      created_at: null,
+      finished_at: null,
+      error: null,
+      result: {},
+      output_path: null,
+      output_content: null,
+      awaiting_approval: null,
+    });
+    mocks.getLoomPendingApproval.mockResolvedValue({
+      request_id: "request-1",
+      run_id: "task-1",
+      nodes: ["approval_gate"],
+    });
+    mocks.readDecision.mockResolvedValue({ status: "approved", comment: "恢复后通过" });
+
+    const result = await syncDeliverableFromLoom({
+      wid: "wid-1",
+      userId: "user-1",
+      row: { ...baseRow, approvalInstanceId: "instance-1", status: "running" },
+    });
+
+    expect(result.status).toBe("awaiting_approval");
+    expect(result.awaitingApproval?.nodes).toEqual(["approval_gate"]);
+    expect(mocks.outboxCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({ kind: "approve", taskId: "task-1" }),
+    });
   });
 
   it("普通完成任务不创建审批，也不会触发闸门放行", async () => {
