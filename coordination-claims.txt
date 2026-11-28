@@ -4,5 +4,4 @@
 # 不走 PR + CI —— 这样认领在**合并前**就可见。为什么不在仓库文件里：见脚本 docstring。
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
-F:/Nexus/corps-wt-ui-contract | test/ui-contract-matrix | web/e2e/**,docs/ui-contract-matrix.md | zcode-ui-contract | 2026-11-28T03:54Z | 2026-11-28T15:54Z | 真实 UI 契约矩阵、主流程与异常路径验收
-F:/Nexus/corps-wt-monitor | docs/uptimerobot-target-url | docs/ops/UPTIMEROBOT-SETUP.md,docs/runbook-monitoring.md | qoder | 2026-11-28T04:12Z | 2026-11-28T12:12Z | 写 UptimeRobot owner 配置清单
+F:/Nexus/corps-wt-nexusloom-p0 | fix/deliverable-webhook-integrity | web/tests/integration/deliverable-fullchain.test.ts,web/tests/helpers.ts,scripts/deliverable-integration.sh,scripts/deliverable-mock-llm.py,web/package.json,web/vitest.config.ts,docs/runbook-deliverable-integration.md,.github/workflows/ci.yml | qoder | 2026-11-28T04:48Z | 2026-11-28T08:48Z | 实现 #399：Corps↔Nexusloom 全链路集成测试（真实 HTTP/DB/worker）
