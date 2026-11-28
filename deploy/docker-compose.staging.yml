@@ -1,0 +1,111 @@
+# =============================================================================
+# deploy/docker-compose.staging.yml — Staging overlay（叠加在根 docker-compose.yml）
+# =============================================================================
+# 用法：
+#   docker compose -f docker-compose.yml -f deploy/docker-compose.staging.yml \
+#     --env-file deploy/.env.staging up -d
+#
+# 与 prod overlay 的分工：staging 保留本机 3000/8910 入口用于真实验收；
+# 不复制生产 Caddy/网络约束，不另造业务服务定义。
+# sidecar 的 data 目录与备份目录必须是**显式绝对路径**，不能随项目目录漂移。
+# =============================================================================
+
+services:
+  db:
+    ports: !override
+      - "127.0.0.1:${STAGING_DB_PORT:-25433}:5432"
+
+  # 文档交付 Staging 不启动音视频服务；真实 LiveKit 验收时显式
+  # `--profile livekit`，避免占位配置与 100 个 UDP 端口影响无关演练。
+  livekit:
+    profiles: ["livekit"]
+
+  app:
+    environment:
+      NEXUSLOOM_URL: http://nexusloom:8910
+      NEXUSLOOM_API_KEY: ${NEXUSLOOM_API_KEY:?请设置 sidecar Admin API key}
+      # 日报 adapter 与交付代理共用同一 sidecar；两个变量都要保留。
+      LOOM_RUNTIME_URL: http://nexusloom:8910
+      LOOM_RUNTIME_API_KEY: ${NEXUSLOOM_API_KEY}
+    depends_on:
+      nexusloom:
+        condition: service_healthy
+
+  nexusloom:
+    build:
+      context: ${NEXUSLOOM_CONTEXT:-../Workflow/nexusloom}
+      dockerfile: Dockerfile
+    image: nexusloom:staging
+    container_name: corps-nexusloom
+    restart: unless-stopped
+    environment: &nexusloom-environment
+      ADMIN_API_KEY: ${NEXUSLOOM_API_KEY}
+      DEEPSEEK_API_URL: ${DEEPSEEK_API_URL:-}
+      DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-chat}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      LLM_API_URL: ${LLM_API_URL:-}
+      LLM_MODEL: ${LLM_MODEL:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      # SQLite 任务/审批/成本/交付账本也收进同一备份根目录。
+      LOOM_STATE_DIR: /app/data/state
+      LOOM_VERSIONS_DIR: /app/data/versions
+    ports:
+      - "127.0.0.1:8910:8910"
+    volumes: &nexusloom-volumes
+      # 所有持久态收进同一宿主目录：SQLite state、任务输出、checkpoint、日志与版本。
+      # state 同时挂到默认 bus_data 路径，兼容尚未走 LOOM_STATE_DIR 的读取方。
+      # 禁止再拆成未纳入 tar 的命名卷或容器可写层，否则删除重建后 task not found。
+      - ${NEXUSLOOM_DATA_DIR:-/opt/corps/nexusloom/data}:/app/data
+      - ${NEXUSLOOM_DATA_DIR:-/opt/corps/nexusloom/data}/state:/app/bus_data
+      - ${NEXUSLOOM_DATA_DIR:-/opt/corps/nexusloom/data}/checkpoints:/app/checkpoints
+      - ${NEXUSLOOM_DATA_DIR:-/opt/corps/nexusloom/data}/logs:/app/logs
+      - ${NEXUSLOOM_DATA_DIR:-/opt/corps/nexusloom/data}/versions:/app/versions
+      - ${NEXUSLOOM_DATA_DIR:-/opt/corps/nexusloom/data}/backups:/app/backups
+      - ${NEXUSLOOM_DATA_DIR:-/opt/corps/nexusloom/data}/output:/app/output
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8910/health', timeout=3)",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - corps-net
+
+  # Admin API 不消费恢复队列；独立 worker 与 API 共用同一状态目录，
+  # 负责普通任务和 approve 后 resume=1 的 checkpoint 续跑。
+  nexusloom-worker:
+    image: nexusloom:staging
+    container_name: corps-nexusloom-worker
+    restart: unless-stopped
+    command:
+      ["-c", "config.production.json", "--worker", "--worker-id=staging-worker"]
+    environment: *nexusloom-environment
+    volumes: *nexusloom-volumes
+    depends_on:
+      nexusloom:
+        condition: service_healthy
+    healthcheck:
+      # worker 不监听 Admin API 端口，不能继承镜像的 /health 检查。
+      disable: true
+    networks:
+      - corps-net
+
+  backup:
+    volumes:
+      # 与 restore/staging-backup 的默认目录同源，避免“备份在 volume、脚本找宿主目录”。
+      - ${BACKUP_DIR:-/opt/corps/backups}:/backups
+
+volumes:
+  # 独立卷名，避免 Staging 复用开发库密码/数据；旧卷不删除。
+  postgres_data:
+    name: corps-staging-postgres-data
+  uploads_data:
+    name: corps-staging-uploads-data
+  backups_data:
+    name: corps-staging-backups-data

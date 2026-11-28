@@ -28,6 +28,7 @@ dist/
 # 等于新开了一条"密钥摆进 `git add .` 枪口下"的路。模板一律以 .example 结尾入库。
 .env*
 !.env.example
+!deploy/.env.staging.example
 
 # Debug
 npm-debug.log*

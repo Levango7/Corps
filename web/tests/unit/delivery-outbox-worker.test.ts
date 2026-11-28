@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   reschedule: vi.fn(),
   fail: vi.fn(),
   getLoomTask: vi.fn(),
+  getLoomPendingApproval: vi.fn(),
   release: vi.fn(),
   sync: vi.fn(),
   readDecision: vi.fn(),
@@ -21,7 +22,10 @@ vi.mock("@/lib/delivery/outbox", () => ({
   DELIVERY_OUTBOX_MAX_ATTEMPTS: 5,
 }));
 
-vi.mock("@/lib/ai/nexusloom", () => ({ getLoomTask: mocks.getLoomTask }));
+vi.mock("@/lib/ai/nexusloom", () => ({
+  getLoomTask: mocks.getLoomTask,
+  getLoomPendingApproval: mocks.getLoomPendingApproval,
+}));
 
 vi.mock("@/lib/ai/deliverable-sync", () => ({
   isTerminalDeliverableStatus: (status: string) =>
@@ -66,6 +70,7 @@ function outboxRow(kind: "sync" | "approve" | "reject", attempts = 0) {
 describe("delivery outbox worker", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    mocks.getLoomPendingApproval.mockResolvedValue(null);
     mocks.runWithWorkspace.mockImplementation(async (_wid, fn) =>
       fn({ deliverable: { findFirst: mocks.deliverableFindFirst } }),
     );
@@ -105,6 +110,27 @@ describe("delivery outbox worker", () => {
 
     expect(mocks.release).not.toHaveBeenCalled();
     expect(mocks.readDecision).not.toHaveBeenCalled();
+    expect(mocks.sync).toHaveBeenCalledOnce();
+    expect(stats.completed).toBe(1);
+  });
+
+  it("重启后投影没有 awaiting，但持久台账 pending 时仍必须放行", async () => {
+    const row = outboxRow("approve");
+    mocks.claimNext.mockResolvedValueOnce(row).mockResolvedValueOnce(null);
+    mocks.getLoomTask.mockResolvedValue({ status: "running", awaiting_approval: null });
+    mocks.getLoomPendingApproval.mockResolvedValue({
+      request_id: "request-1",
+      run_id: "task-1",
+      nodes: ["approval_gate"],
+    });
+    mocks.readDecision.mockResolvedValue({ status: "approved", comment: "恢复后通过" });
+
+    const stats = await processDeliveryOutboxBatch(1);
+
+    expect(mocks.release).toHaveBeenCalledWith("task-1", {
+      status: "approved",
+      comment: "恢复后通过",
+    });
     expect(mocks.sync).toHaveBeenCalledOnce();
     expect(stats.completed).toBe(1);
   });

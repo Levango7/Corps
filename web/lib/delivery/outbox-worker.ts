@@ -4,7 +4,7 @@
  */
 
 import { runWithWorkspace } from "@/lib/auth";
-import { getLoomTask } from "@/lib/ai/nexusloom";
+import { getLoomPendingApproval, getLoomTask } from "@/lib/ai/nexusloom";
 import {
   isTerminalDeliverableStatus,
   releaseDeliverableGate,
@@ -71,7 +71,8 @@ async function processDecision(row: DeliveryOutboxRow): Promise<"done" | "resche
   }
 
   const detail = await getLoomTask(row.taskId);
-  if (detail.awaiting_approval) {
+  const pendingGate = detail.awaiting_approval ?? (await getLoomPendingApproval(row.taskId));
+  if (pendingGate) {
     const decision = await runWithWorkspace(row.workspaceId, async (tx) =>
       readDeliverableGateDecision(tx, row.workspaceId, deliverable.approvalInstanceId!),
     );

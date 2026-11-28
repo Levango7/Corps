@@ -12,6 +12,7 @@
 import { runWithWorkspace } from "@/lib/auth";
 import {
   approveLoomTask,
+  getLoomPendingApproval,
   getLoomTask,
   rejectLoomTask,
   type LoomAwaitingApproval,
@@ -86,8 +87,15 @@ export async function syncDeliverableFromLoom(args: {
   const { wid, userId, row, source = "ui" } = args;
   const detail = await getLoomTask(row.taskId);
   const awaiting = detail.awaiting_approval ?? null;
+  // 独立 worker / 重启后的详情都来自 RunStore 投影：内存 awaiting 不在 API 进程，
+  // 但持久待批仍在。普通任务的首次建单与灾后恢复必须共用这份事实。
+  const persistedGate =
+    !awaiting && !isTerminalDeliverableStatus(detail.status)
+      ? await getLoomPendingApproval(row.taskId)
+      : null;
   const gatePending =
-    Boolean(awaiting) || (detail.status === "paused" && Boolean(row.approvalInstanceId));
+    Boolean(awaiting || persistedGate) ||
+    (detail.status === "paused" && Boolean(row.approvalInstanceId));
   const displayStatus = gatePending ? "awaiting_approval" : detail.status;
 
   const outcome = await runWithWorkspace(
@@ -95,9 +103,9 @@ export async function syncDeliverableFromLoom(args: {
     async (tx) => {
       let approvalInstanceId = row.approvalInstanceId;
 
-      // 只有 sidecar 明确报告 awaiting_approval 才建待办；投影降级为 paused
-      // 时不新建，避免重启后编造一条没有人审事实的审批。
-      if (awaiting && !approvalInstanceId) {
+      // 内存 awaiting 与持久 pending 都是真实人审事实；仅 paused 投影不建单，
+      // 避免把普通暂停误编成审批。
+      if ((awaiting || persistedGate) && !approvalInstanceId) {
         approvalInstanceId = await ensureDeliverableGateApproval(tx, wid, {
           id: row.id,
           taskId: row.taskId,
@@ -159,6 +167,6 @@ export async function syncDeliverableFromLoom(args: {
     outputPath: detail.output_path ?? row.outputPath,
     outputSummary: (detail.output_content ?? "").slice(0, 2000) || row.outputSummary,
     approvalInstanceId: outcome.approvalInstanceId,
-    awaitingApproval: awaiting,
+    awaitingApproval: awaiting ?? persistedGate,
   };
 }

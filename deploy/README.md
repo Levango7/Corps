@@ -403,7 +403,49 @@ deploy/
 
 ---
 
-## 12. 本包未覆盖的
+## 12. Staging：sidecar 同栈与备份恢复
+
+Staging 复用根 compose + `deploy/docker-compose.staging.yml`，不改生产 overlay。
+`NEXUSLOOM_DATA_DIR` 与 `BACKUP_DIR` 必须是**显式绝对路径**，不能随
+`--project-directory` 改变而换账。密钥只放 `deploy/.env.staging`（已被忽略），模板为
+`deploy/.env.staging.example`。
+
+```bash
+cp deploy/.env.staging.example deploy/.env.staging
+$EDITOR deploy/.env.staging
+bash deploy/scripts/staging-up.sh             # 默认构建并启动
+bash deploy/scripts/staging-up.sh --no-build  # 已有同版本镜像时复用
+bash deploy/scripts/staging-smoke.sh          # app DB + sidecar + outbox cron 三检
+```
+
+LiveKit 默认不启动；只有音视频验收才显式加 `--profile livekit` 并配置独立密钥与端口。
+
+sidecar 的任务/审批/成本 SQLite 库（含 WAL）、交付文件、checkpoint、日志、版本与备份
+统一落在 `${NEXUSLOOM_DATA_DIR}` 下，不能只备 `data/` 里的输入文件。启动脚本会通过
+一次性 root 容器建立目录并交还给镜像的 `app` 用户（uid=1001），随后恢复正常非 root 运行。
+
+```bash
+bash deploy/scripts/staging-backup.sh
+bash deploy/scripts/staging-restore.sh <备份.dump>          # 默认只恢复临时库验证
+printf 'RESTORE\n' | bash deploy/scripts/staging-restore.sh <备份.dump> --force
+```
+
+sidecar 由 Admin API 与独立 `--worker` 两个容器组成：API 接任务与审批，worker 消费
+普通队列及批准后的 `resume=1` 续跑队列，两者共用上述持久目录，不能只启动 API。
+
+备份会短暂停止 app/cron，并用 `pause`（不是 `stop`）同时冻结 API 与 worker，避免 WAL
+半状态，也避免等待审批的任务被取消；结束后自动恢复写入方并做健康检查。每次备份生成同名
+`corps-staging-<时间戳>.dump` 与 `corps-staging-<时间戳>-sidecar.tgz`，恢复严格按
+文件名配对，不能使用“目录里最新的 tar”代替。
+
+`--force` 会覆盖目标数据库与 sidecar 数据目录，因此强制要求输入 `RESTORE`，并在
+覆盖前自动再做一份安全备份。RLS 策略在恢复后幂等重放。恢复完成会同时检查应用、
+sidecar 与 outbox cron；业务验收还应继续核对原任务可读、待审任务可续跑、交付文件
+可下载，以及恢复后能创建并完成新任务。
+
+---
+
+## 13. 本包未覆盖的
 
 诚实列出，避免误以为覆盖了：
 
